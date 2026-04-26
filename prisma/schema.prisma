@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  jobs      Job[]
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      JobStatus @default(PENDING)
+  dueDate     DateTime?
+  amount      Decimal   @db.Decimal(10, 2)
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  payments    Payment[]
+  createdAt   DateTime  @default(now())
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  amount    Decimal       @db.Decimal(10, 2)
+  method    PaymentMethod
+  paidAt    DateTime      @default(now())
+  jobId     String
+  job       Job           @relation(fields: [jobId], references: [id])
+}
+
+enum JobStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  DELIVERED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
