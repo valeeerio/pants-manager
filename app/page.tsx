@@ -13,7 +13,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Vista operativa del laboratorio: priorita, consegne e andamento economico."
+        description="Riepilogo dei lavori, consegne e pagamenti del laboratorio."
         actions={<Button>Nuovo lavoro</Button>}
       />
 

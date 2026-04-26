@@ -12,7 +12,7 @@ export function Topbar() {
         </div>
         <div className="hidden w-full max-w-sm items-center gap-2 rounded-md border bg-white px-3 md:flex">
           <Search className="h-4 w-4 text-muted-foreground" />
-          <Input className="border-0 px-0 shadow-none focus-visible:ring-0" placeholder="Cerca clienti, lavori, pagamenti" />
+          <Input className="border-0 px-0 shadow-none focus-visible:ring-0" placeholder="Cerca cliente, lavoro o telefono..." />
         </div>
         <Button variant="outline" size="icon" aria-label="Calendario">
           <CalendarDays className="h-4 w-4" />

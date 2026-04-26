@@ -61,8 +61,8 @@ export function Sidebar() {
 
       <div className="border-t p-4">
         <div className="rounded-lg bg-secondary p-4">
-          <p className="text-sm font-semibold text-secondary-foreground">Turno laboratorio</p>
-          <p className="mt-1 text-xs text-secondary-foreground/75">Aperto fino alle 19:00</p>
+          <p className="text-sm font-semibold text-secondary-foreground">Promemoria</p>
+          <p className="mt-1 text-xs text-secondary-foreground/75">2 consegne previste oggi</p>
         </div>
       </div>
     </aside>
