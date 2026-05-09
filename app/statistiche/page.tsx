@@ -25,7 +25,7 @@ export default function StatsPage() {
                 <span className="text-sm font-medium">{item.day}</span>
                 <div className="h-9 rounded-md bg-muted">
                   <div
-                    className="h-9 rounded-md bg-primary"
+                    className="h-9 rounded-md bg-amber-500"
                     style={{ width: `${52 + index * 8}%` }}
                     aria-label={`Ricavi ${item.day}`}
                   />
@@ -48,7 +48,7 @@ export default function StatsPage() {
                   <span className="font-medium">{item.value}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted">
-                  <div className="h-2 rounded-full bg-accent-foreground" style={{ width: `${item.value}%` }} />
+                  <div className="h-2 rounded-full bg-amber-500" style={{ width: `${item.value}%` }} />
                 </div>
               </div>
             ))}
@@ -71,8 +71,8 @@ export default function StatsPage() {
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Riordini partner</p>
-            <p className="mt-2 text-3xl font-semibold">31</p>
+            <p className="text-sm text-muted-foreground">Lavori completati</p>
+            <p className="mt-2 text-3xl font-semibold">18</p>
           </CardContent>
         </Card>
       </section>

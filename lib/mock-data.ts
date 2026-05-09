@@ -6,37 +6,47 @@ export const metrics = [
 ];
 
 export const customers = [
-  { name: "Mario Rossi", phone: "+39 347 221 9081", email: "mario.rossi@email.it", jobs: 3, lastVisit: "Oggi" },
-  { name: "Luca Bianchi", phone: "+39 333 714 0029", email: "luca.bianchi@email.it", jobs: 2, lastVisit: "Ieri" },
-  { name: "Anna Verdi", phone: "+39 339 882 4401", email: "anna.verdi@email.it", jobs: 1, lastVisit: "22 Apr" },
-  { name: "Giuseppe Neri", phone: "+39 348 447 1120", email: "giuseppe.neri@email.it", jobs: 1, lastVisit: "19 Apr" }
+  { name: "Mario Rossi", phone: "+39 347 221 9081", email: "mario.rossi@email.it", jobs: 6, lastVisit: "Oggi" },
+  { name: "Luca Bianchi", phone: "+39 333 714 0029", email: "luca.bianchi@email.it", jobs: 4, lastVisit: "Ieri" },
+  { name: "Anna Verdi", phone: "+39 339 882 4401", email: "anna.verdi@email.it", jobs: 3, lastVisit: "25 Apr" },
+  { name: "Giuseppe Neri", phone: "+39 348 447 1120", email: "giuseppe.neri@email.it", jobs: 2, lastVisit: "23 Apr" },
+  { name: "Francesca Conti", phone: "+39 346 598 3312", email: "f.conti@email.it", jobs: 2, lastVisit: "22 Apr" },
+  { name: "Roberto Ferrara", phone: "+39 335 109 7754", email: "r.ferrara@email.it", jobs: 1, lastVisit: "20 Apr" }
 ];
 
 export const jobs = [
-  { code: "PM-001", customer: "Mario Rossi", work: "Orlo pantalone elegante", status: "In lavorazione", due: "Oggi, 17:00", amount: "€ 15" },
-  { code: "PM-002", customer: "Luca Bianchi", work: "Stringere vita jeans", status: "Pronto", due: "Oggi, 18:30", amount: "€ 20" },
-  { code: "PM-003", customer: "Anna Verdi", work: "Sostituzione zip", status: "In attesa cliente", due: "Domani", amount: "€ 18" },
-  { code: "PM-004", customer: "Giuseppe Neri", work: "Accorciare pantalone", status: "Da iniziare", due: "Venerdì", amount: "€ 12" }
+  { code: "GS-001", customer: "Mario Rossi", work: "Orlo pantalone elegante", status: "In lavorazione", due: "Oggi, 17:00", amount: "€ 15" },
+  { code: "GS-002", customer: "Luca Bianchi", work: "Stringere vita jeans", status: "Pronto", due: "Oggi, 18:30", amount: "€ 20" },
+  { code: "GS-003", customer: "Anna Verdi", work: "Sostituzione zip", status: "In attesa cliente", due: "Domani", amount: "€ 18" },
+  { code: "GS-004", customer: "Giuseppe Neri", work: "Accorciare pantalone", status: "Da iniziare", due: "Venerdì", amount: "€ 12" }
 ];
 
 export const payments = [
-  { id: "PAY-3021", customer: "Mario Rossi", job: "PM-001", method: "Bonifico", amount: "€ 15", status: "In lavorazione" },
-  { id: "PAY-3020", customer: "Luca Bianchi", job: "PM-002", method: "Carta", amount: "€ 20", status: "Pronto" },
-  { id: "PAY-3019", customer: "Anna Verdi", job: "PM-003", method: "Contanti", amount: "€ 18", status: "In attesa cliente" },
-  { id: "PAY-3018", customer: "Giuseppe Neri", job: "PM-004", method: "Carta", amount: "€ 12", status: "Da iniziare" }
+  { id: "PAY-3027", customer: "Mario Rossi", job: "GS-001", method: "Bonifico", amount: "€ 15", status: "In lavorazione" },
+  { id: "PAY-3026", customer: "Luca Bianchi", job: "GS-002", method: "Carta", amount: "€ 20", status: "Pronto" },
+  { id: "PAY-3025", customer: "Anna Verdi", job: "GS-003", method: "Contanti", amount: "€ 18", status: "In attesa cliente" },
+  { id: "PAY-3024", customer: "Giuseppe Neri", job: "GS-004", method: "Carta", amount: "€ 12", status: "Da iniziare" }
 ];
 
 export const production = [
-  { label: "Riparazioni", value: 44 },
-  { label: "Modifiche", value: 32 },
-  { label: "Su misura", value: 18 },
-  { label: "Campioni", value: 6 }
+  { label: "Orli e accorciature", value: 38 },
+  { label: "Modifiche vita e fianchi", value: 29 },
+  { label: "Riparazioni e zip", value: 21 },
+  { label: "Su misura", value: 12 }
+];
+
+export const deadlines = [
+  { customer: "Mario Rossi", work: "Orlo pantalone elegante", due: "Oggi", status: "In lavorazione" },
+  { customer: "Luca Bianchi", work: "Stringere vita jeans", due: "Oggi", status: "Pronto" },
+  { customer: "Anna Verdi", work: "Sostituzione zip", due: "Domani", status: "In attesa cliente" },
+  { customer: "Giuseppe Neri", work: "Accorciare pantalone", due: "Venerdì", status: "Da iniziare" },
+  { customer: "Francesca Romano", work: "Cerniera giacca", due: "Venerdì", status: "In lavorazione" }
 ];
 
 export const weeklySchedule = [
-  { day: "Lun", jobs: 9, revenue: "€ 740" },
-  { day: "Mar", jobs: 11, revenue: "€ 930" },
-  { day: "Mer", jobs: 8, revenue: "€ 620" },
-  { day: "Gio", jobs: 13, revenue: "€ 1.120" },
-  { day: "Ven", jobs: 10, revenue: "€ 860" }
+  { day: "Lun", jobs: 7, revenue: "€ 55" },
+  { day: "Mar", jobs: 12, revenue: "€ 80" },
+  { day: "Mer", jobs: 9, revenue: "€ 45" },
+  { day: "Gio", jobs: 14, revenue: "€ 95" },
+  { day: "Ven", jobs: 11, revenue: "€ 70" }
 ];

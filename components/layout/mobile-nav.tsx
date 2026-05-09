@@ -27,7 +27,7 @@ export function MobileNav() {
               href={item.href}
               className={cn(
                 "flex h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-muted-foreground",
-                active && "bg-primary text-primary-foreground"
+                active && "bg-amber-700 text-white"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -39,7 +39,7 @@ export function MobileNav() {
           href="/impostazioni"
           className={cn(
             "flex h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-muted-foreground",
-            pathname === "/impostazioni" && "bg-primary text-primary-foreground"
+            pathname === "/impostazioni" && "bg-amber-700 text-white"
           )}
         >
           <Menu className="h-4 w-4" />

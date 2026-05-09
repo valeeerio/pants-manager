@@ -13,7 +13,7 @@ export default function CustomersPage() {
         title="Clienti"
         description="Anagrafiche, contatti e storico rapido dei clienti privati e partner."
         actions={
-          <Button>
+          <Button className="bg-amber-600 text-white hover:bg-amber-700">
             <Plus className="h-4 w-4" />
             Nuovo cliente
           </Button>

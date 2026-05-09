@@ -11,7 +11,7 @@ export default function SettingsPage() {
         title="Impostazioni"
         description="Preferenze operative del laboratorio e parametri base della futura integrazione dati."
         actions={
-          <Button>
+          <Button className="bg-amber-600 text-white hover:bg-amber-700">
             <Save className="h-4 w-4" />
             Salva
           </Button>
@@ -27,7 +27,7 @@ export default function SettingsPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <label className="text-sm font-medium" htmlFor="shop-name">Nome laboratorio</label>
-              <Input id="shop-name" defaultValue="Pants Manager Lab" />
+              <Input id="shop-name" defaultValue="Laboratorio Sartoriale" />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium" htmlFor="shop-phone">Telefono</label>

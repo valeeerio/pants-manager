@@ -18,7 +18,7 @@ export default function PaymentsPage() {
               <Download className="h-4 w-4" />
               Esporta
             </Button>
-            <Button>
+            <Button className="bg-amber-600 text-white hover:bg-amber-700">
               <Plus className="h-4 w-4" />
               Registra
             </Button>
@@ -30,19 +30,19 @@ export default function PaymentsPage() {
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Incassato oggi</p>
-            <p className="mt-2 text-3xl font-semibold">€ 486</p>
+            <p className="mt-2 text-3xl font-semibold">€ 65</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Da saldare</p>
-            <p className="mt-2 text-3xl font-semibold">€ 1.240</p>
+            <p className="mt-2 text-3xl font-semibold">€ 85</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Media ordine</p>
-            <p className="mt-2 text-3xl font-semibold">€ 74</p>
+            <p className="mt-2 text-3xl font-semibold">€ 18</p>
           </CardContent>
         </Card>
       </section>
