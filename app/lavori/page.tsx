@@ -557,6 +557,18 @@ export default function JobsPage() {
   }
 
   useEffect(() => {
+    const isAnyModalOpen = isModalOpen || isNewModalOpen;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen, isNewModalOpen]);
+
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         if (isNewModalOpen) {
