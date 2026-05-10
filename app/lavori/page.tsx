@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   ClipboardList,
@@ -14,7 +14,7 @@ import {
   Pencil,
   CheckCircle,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -257,6 +257,33 @@ const allJobs: Job[] = [
   },
 ];
 
+const CLIENTI = [
+  "Mario Rossi",
+  "Luca Bianchi",
+  "Anna Verdi",
+  "Giuseppe Neri",
+  "Francesca Conti",
+  "Roberto Ferrara",
+];
+
+const TIPI_LAVORO = [
+  "Orlo pantalone",
+  "Stringere vita",
+  "Accorciare gamba",
+  "Allargare pantalone",
+  "Sostituzione zip",
+  "Riparazione strappo",
+  "Pantalone su misura",
+  "Altro",
+];
+
+const FIELD_CLASS =
+  "w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+const FIELD_ERROR_CLASS =
+  "w-full rounded-lg border border-red-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+const TEXTAREA_CLASS =
+  "w-full resize-none rounded-lg border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+
 const stages = [
   { label: "Da iniziare", count: 6 },
   { label: "In lavorazione", count: 11 },
@@ -285,30 +312,6 @@ type SortKey =
   | "dueDate"
   | "estimatedPrice";
 type SortOrder = "asc" | "desc";
-
-function SuccessBanner() {
-  const searchParams = useSearchParams();
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("success") === "created") {
-      setShow(true);
-      const t = setTimeout(() => setShow(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [searchParams]);
-
-  if (!show) return null;
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-      <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
-      <p className="text-sm font-medium text-green-700">
-        Lavoro creato con successo!
-      </p>
-    </div>
-  );
-}
 
 function Field({
   label,
@@ -375,13 +378,33 @@ export default function JobsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Modal
+  // Modal dettaglio
   const [selectedLavoro, setSelectedLavoro] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quickStatusValue, setQuickStatusValue] = useState("");
   const [showStatusChange, setShowStatusChange] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Banner successo
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+
+  // Modal nuovo lavoro
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [newCliente, setNewCliente] = useState("");
+  const [newTitolo, setNewTitolo] = useState("");
+  const [newTipoLavoro, setNewTipoLavoro] = useState("");
+  const [newDataConsegna, setNewDataConsegna] = useState("");
+  const [newDescrizione, setNewDescrizione] = useState("");
+  const [newPrezzoStimato, setNewPrezzoStimato] = useState("");
+  const [newNote, setNewNote] = useState("");
+  const [newErrors, setNewErrors] = useState({
+    cliente: "",
+    titolo: "",
+    tipoLavoro: "",
+    dataConsegna: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -473,16 +496,80 @@ export default function JobsPage() {
     setDateTo("");
   }
 
+  function resetNewForm() {
+    setNewCliente("");
+    setNewTitolo("");
+    setNewTipoLavoro("");
+    setNewDataConsegna("");
+    setNewDescrizione("");
+    setNewPrezzoStimato("");
+    setNewNote("");
+    setNewErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setIsSubmitting(false);
+  }
+
+  function validateNewForm(): boolean {
+    const today = localDateStr(new Date());
+    const next = { cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" };
+    let valid = true;
+
+    if (!newCliente) { next.cliente = "Seleziona un cliente"; valid = false; }
+    if (!newTitolo.trim()) { next.titolo = "Inserisci un titolo per il lavoro"; valid = false; }
+    if (!newTipoLavoro) { next.tipoLavoro = "Seleziona il tipo di lavoro"; valid = false; }
+    if (!newDataConsegna) {
+      next.dataConsegna = "Inserisci una data di consegna";
+      valid = false;
+    } else if (newDataConsegna < today) {
+      next.dataConsegna = "La data non può essere nel passato";
+      valid = false;
+    }
+
+    setNewErrors(next);
+    return valid;
+  }
+
+  function handleNewSubmit() {
+    if (!validateNewForm()) return;
+    setIsSubmitting(true);
+    const newId = jobs.length + 1;
+    const nuovoLavoro: Job = {
+      id: newId,
+      code: `GS-${String(newId).padStart(3, "0")}`,
+      clientName: newCliente,
+      title: newTitolo,
+      type: newTipoLavoro,
+      status: "Da iniziare",
+      receivedDate: localDateStr(new Date()),
+      dueDate: newDataConsegna,
+      estimatedPrice: parseFloat(newPrezzoStimato) || 0,
+      finalPrice: null,
+      description: newDescrizione || "",
+      notes: newNote || null,
+    };
+    setTimeout(() => {
+      setJobs((prev) => [...prev, nuovoLavoro]);
+      setIsSubmitting(false);
+      setIsNewModalOpen(false);
+      resetNewForm();
+      setShowSuccessBanner(true);
+      setTimeout(() => setShowSuccessBanner(false), 3000);
+    }, 500);
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        if (isNewModalOpen) {
+          setIsNewModalOpen(false);
+          resetNewForm();
+        }
         setShowDeleteConfirm(false);
         setIsModalOpen(false);
       }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [isNewModalOpen]);
 
   function openModal(job: Job) {
     setSelectedLavoro(job);
@@ -524,7 +611,7 @@ export default function JobsPage() {
         actions={
           <Button
             className="bg-amber-600 text-white hover:bg-amber-700"
-            onClick={() => router.push("/lavori/nuovo")}
+            onClick={() => setIsNewModalOpen(true)}
           >
             <Plus className="h-4 w-4" />
             Nuovo lavoro
@@ -532,9 +619,14 @@ export default function JobsPage() {
         }
       />
 
-      <Suspense fallback={null}>
-        <SuccessBanner />
-      </Suspense>
+      {showSuccessBanner && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+          <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
+          <p className="text-sm font-medium text-green-700">
+            Lavoro creato con successo!
+          </p>
+        </div>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stages.map((stage) => (
@@ -994,6 +1086,176 @@ export default function JobsPage() {
               >
                 Elimina
               </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal nuovo lavoro */}
+      {isMounted && isNewModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
+        >
+          <div
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-start justify-between border-b border-stone-200 p-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Nuovo lavoro</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Compila i campi per aggiungere un nuovo lavoro al laboratorio.
+                </p>
+              </div>
+              <button
+                className="ml-4 text-slate-400 hover:text-slate-600"
+                onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="space-y-5 p-6">
+              {/* Cliente */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Cliente <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={newCliente}
+                  onChange={(e) => setNewCliente(e.target.value)}
+                  className={newErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                >
+                  <option value="">Seleziona un cliente</option>
+                  {CLIENTI.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {newErrors.cliente && (
+                  <p className="mt-1 text-sm text-red-500">{newErrors.cliente}</p>
+                )}
+              </div>
+
+              {/* Titolo */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Titolo lavoro <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newTitolo}
+                  onChange={(e) => setNewTitolo(e.target.value)}
+                  placeholder="Es. Orlo pantalone elegante"
+                  className={newErrors.titolo ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {newErrors.titolo && (
+                  <p className="mt-1 text-sm text-red-500">{newErrors.titolo}</p>
+                )}
+              </div>
+
+              {/* Tipo lavoro */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Tipo lavoro <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={newTipoLavoro}
+                  onChange={(e) => setNewTipoLavoro(e.target.value)}
+                  className={newErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                >
+                  <option value="">Seleziona tipo lavoro</option>
+                  {TIPI_LAVORO.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                {newErrors.tipoLavoro && (
+                  <p className="mt-1 text-sm text-red-500">{newErrors.tipoLavoro}</p>
+                )}
+              </div>
+
+              {/* Data consegna */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Data consegna <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={newDataConsegna}
+                  min={localDateStr(new Date())}
+                  onChange={(e) => setNewDataConsegna(e.target.value)}
+                  className={newErrors.dataConsegna ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {newErrors.dataConsegna && (
+                  <p className="mt-1 text-sm text-red-500">{newErrors.dataConsegna}</p>
+                )}
+              </div>
+
+              {/* Descrizione */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Descrizione
+                </label>
+                <textarea
+                  value={newDescrizione}
+                  onChange={(e) => setNewDescrizione(e.target.value)}
+                  placeholder="Descrivi il lavoro da svolgere..."
+                  rows={3}
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+
+              {/* Prezzo stimato */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Prezzo stimato (€)
+                </label>
+                <input
+                  type="number"
+                  value={newPrezzoStimato}
+                  onChange={(e) => setNewPrezzoStimato(e.target.value)}
+                  placeholder="0"
+                  min={0}
+                  className={FIELD_CLASS}
+                />
+              </div>
+
+              {/* Note interne */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Note interne
+                </label>
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Note riservate al laboratorio..."
+                  rows={3}
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex shrink-0 justify-end gap-3 border-t border-stone-200 p-6">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-slate-600 hover:bg-stone-50 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleNewSubmit}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Salvataggio..." : "Salva lavoro"}
+              </button>
             </div>
           </div>
         </div>,
