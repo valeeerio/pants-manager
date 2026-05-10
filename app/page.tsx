@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Topbar } from "@/components/layout/topbar";
 import { metrics, production, deadlines } from "@/lib/mock-data";
 
 const icons = [Scissors, CalendarCheck, Banknote, Users];
@@ -12,6 +13,9 @@ const icons = [Scissors, CalendarCheck, Banknote, Users];
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
+      <div className="-mx-4 -mt-6 mb-6 sm:-mx-6 lg:-mx-8">
+        <Topbar />
+      </div>
       <PageHeader
         title="Dashboard"
         description="Riepilogo dei lavori, consegne e pagamenti del laboratorio."

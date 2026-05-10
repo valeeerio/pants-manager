@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +15,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <Sidebar />
         <div className="min-h-screen pb-20 lg:pl-72 lg:pb-0">
-          <Topbar />
           <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
         </div>
         <MobileNav />
