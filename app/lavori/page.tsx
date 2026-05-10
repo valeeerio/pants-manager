@@ -778,7 +778,7 @@ export default function JobsPage() {
       {/* Modal dettaglio lavoro */}
       {isModalOpen && selectedLavoro && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setIsModalOpen(false)}
         >
           <div
@@ -933,7 +933,7 @@ export default function JobsPage() {
 
       {/* Modal conferma eliminazione */}
       {showDeleteConfirm && selectedLavoro && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-lg font-semibold text-slate-800">
               Eliminare questo lavoro?
