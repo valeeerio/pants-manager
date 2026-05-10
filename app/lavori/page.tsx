@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { createPortal } from "react-dom";
 import {
   ClipboardList,
@@ -12,8 +12,9 @@ import {
   Trash2,
   RefreshCw,
   Pencil,
+  CheckCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -285,6 +286,30 @@ type SortKey =
   | "estimatedPrice";
 type SortOrder = "asc" | "desc";
 
+function SuccessBanner() {
+  const searchParams = useSearchParams();
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("success") === "created") {
+      setShow(true);
+      const t = setTimeout(() => setShow(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams]);
+
+  if (!show) return null;
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+      <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
+      <p className="text-sm font-medium text-green-700">
+        Lavoro creato con successo!
+      </p>
+    </div>
+  );
+}
+
 function Field({
   label,
   value,
@@ -497,12 +522,19 @@ export default function JobsPage() {
         title="Lavori"
         description="Pianifica modifiche, riparazioni, confezioni su misura e urgenze di consegna."
         actions={
-          <Button className="bg-amber-600 text-white hover:bg-amber-700">
+          <Button
+            className="bg-amber-600 text-white hover:bg-amber-700"
+            onClick={() => router.push("/lavori/nuovo")}
+          >
             <Plus className="h-4 w-4" />
             Nuovo lavoro
           </Button>
         }
       />
+
+      <Suspense fallback={null}>
+        <SuccessBanner />
+      </Suspense>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stages.map((stage) => (
