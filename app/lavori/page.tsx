@@ -172,6 +172,76 @@ const allJobs: Job[] = [
     description: "Riparare tasca posteriore strappata",
     notes: null,
   },
+  {
+    id: 11,
+    code: "GS-011",
+    clientName: "Francesca Conti",
+    title: "Accorciare gamba destra",
+    type: "Accorciare gamba",
+    status: "Da iniziare",
+    receivedDate: "2025-05-09",
+    dueDate: "2025-05-18",
+    estimatedPrice: 14,
+    finalPrice: null,
+    description: "Accorciare solo gamba destra di 3 cm",
+    notes: "Asimmetria segnalata dal cliente",
+  },
+  {
+    id: 12,
+    code: "GS-012",
+    clientName: "Roberto Ferrara",
+    title: "Orlo jeans doppio",
+    type: "Orlo pantalone",
+    status: "In lavorazione",
+    receivedDate: "2025-05-08",
+    dueDate: "2025-05-13",
+    estimatedPrice: 18,
+    finalPrice: null,
+    description: "Orlo doppio jeans scuro",
+    notes: null,
+  },
+  {
+    id: 13,
+    code: "GS-013",
+    clientName: "Mario Rossi",
+    title: "Sostituzione zip laterale",
+    type: "Sostituzione zip",
+    status: "In attesa cliente",
+    receivedDate: "2025-05-07",
+    dueDate: "2025-05-14",
+    estimatedPrice: 20,
+    finalPrice: null,
+    description: "Zip laterale rotta su pantalone elegante",
+    notes: "Cliente deve scegliere colore zip",
+  },
+  {
+    id: 14,
+    code: "GS-014",
+    clientName: "Anna Verdi",
+    title: "Riparazione fodera interna",
+    type: "Riparazione strappo",
+    status: "Pronto",
+    receivedDate: "2025-05-05",
+    dueDate: "2025-05-10",
+    estimatedPrice: 24,
+    finalPrice: 24,
+    description: "Fodera interna scucita su pantalone invernale",
+    notes: null,
+  },
+  {
+    id: 15,
+    code: "GS-015",
+    clientName: "Giuseppe Neri",
+    title: "Stringere fondo gamba",
+    type: "Altro",
+    status: "Da iniziare",
+    receivedDate: "2025-05-10",
+    dueDate: "2025-05-22",
+    estimatedPrice: 16,
+    finalPrice: null,
+    description: "Stringere il fondo di entrambe le gambe",
+    notes: "Stile slim richiesto dal cliente",
+  },
 ];
 
 const stages = [
@@ -564,25 +634,25 @@ export default function JobsPage() {
           </Table>
 
           {/* Carica altri */}
-          {remaining > 0 && (
-            <div className="border-t py-4 text-center">
-              <span className="text-sm text-slate-500">
-                Mostra altri{" "}
+          <div className="border-t border-stone-200 py-4 text-center">
+            {remaining > 0 ? (
+              <p className="text-sm text-slate-500">
+                Stai visualizzando {visibleJobs.length} di{" "}
+                {filteredAndSorted.length} lavori
+                {"  "}
                 <button
-                  className="font-medium text-amber-600 hover:text-amber-700 hover:underline"
+                  className="font-medium text-amber-600 hover:underline"
                   onClick={() => setShowMore((n) => n + 5)}
                 >
-                  {Math.min(remaining, 5)} lavori
+                  Mostra altri 5
                 </button>
-                {remaining > 5 && (
-                  <span className="text-slate-400">
-                    {" "}
-                    ({remaining} in totale)
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400">
+                Tutti i lavori sono visualizzati
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
