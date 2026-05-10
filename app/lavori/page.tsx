@@ -277,11 +277,11 @@ const TIPI_LAVORO = [
 ];
 
 const FIELD_CLASS =
-  "w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 const FIELD_ERROR_CLASS =
-  "w-full rounded-lg border border-red-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+  "w-full rounded-lg border border-red-300 bg-red-50/30 px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400/25";
 const TEXTAREA_CLASS =
-  "w-full resize-none rounded-lg border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";
+  "w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 
 const stages = [
   { label: "Da iniziare", count: 6 },
@@ -300,7 +300,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const SELECT_CLASS =
-  "h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer";
+  "h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60 cursor-pointer";
 
 type SortKey =
   | "code"
@@ -320,10 +320,10 @@ function Field({
 }) {
   return (
     <div>
-      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
         {label}
       </p>
-      <p className="text-sm font-medium text-slate-800">
+      <p className="text-[13px] font-medium text-slate-800">
         {value != null && value !== "" ? (
           value
         ) : (
@@ -711,22 +711,26 @@ export default function JobsPage() {
       />
 
       {showSuccessBanner && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-          <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
-          <p className="text-sm font-medium text-green-700">{successMessage}</p>
+        <div className="animate-fade-in flex items-center gap-3 rounded-xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-green-50/40 px-4 py-3 shadow-sm">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+            <CheckCircle className="h-3.5 w-3.5" />
+          </div>
+          <p className="text-[13px] font-medium text-emerald-800">{successMessage}</p>
         </div>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stages.map((stage) => (
-          <Card key={stage.label}>
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-amber-100 text-amber-600">
-                <ClipboardList className="h-5 w-5" />
+          <Card key={stage.label} className="relative overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/60" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+            <CardContent className="relative flex items-center gap-4 p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/80 text-amber-700 ring-1 ring-amber-200/50">
+                <ClipboardList className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{stage.label}</p>
-                <p className="text-2xl font-semibold">{stage.count}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400/80">{stage.label}</p>
+                <p className="text-[26px] font-bold tracking-[-0.04em] text-slate-900">{stage.count}</p>
               </div>
             </CardContent>
           </Card>
@@ -739,7 +743,7 @@ export default function JobsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Barra filtri */}
-          <div className="flex flex-wrap items-end gap-3 border-b bg-stone-50 px-4 py-3">
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
             <div className="flex flex-col gap-1 min-w-[260px] flex-1">
               <label className="text-xs font-medium text-slate-500">
                 Cerca
@@ -924,7 +928,7 @@ export default function JobsPage() {
                   className="cursor-pointer hover:bg-amber-50"
                   onClick={() => openModal(job)}
                 >
-                  <TableCell className="font-medium text-slate-700">
+                  <TableCell className="font-mono text-[12px] font-semibold text-slate-600">
                     {job.code}
                   </TableCell>
                   <TableCell>{job.clientName}</TableCell>
@@ -959,7 +963,7 @@ export default function JobsPage() {
           </Table>
 
           {/* Carica altri */}
-          <div className="border-t border-stone-200 py-4 text-center">
+          <div className="border-t border-slate-100 py-4 text-center">
             {remaining > 0 ? (
               <p className="text-sm text-slate-500">
                 Stai visualizzando {visibleJobs.length} di{" "}
@@ -984,17 +988,17 @@ export default function JobsPage() {
       {/* Modal dettaglio lavoro */}
       {isMounted && isModalOpen && selectedLavoro && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-stone-200 p-6">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-5">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-slate-800">
+                <h2 className="font-mono text-[20px] font-bold tracking-[-0.02em] text-slate-900">
                   {selectedLavoro.code}
                 </h2>
                 <Badge
@@ -1007,10 +1011,10 @@ export default function JobsPage() {
                 </Badge>
               </div>
               <button
-                className="text-slate-400 hover:text-slate-600"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 onClick={() => setIsModalOpen(false)}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -1096,7 +1100,7 @@ export default function JobsPage() {
             )}
 
             {/* Footer */}
-            <div className="flex shrink-0 items-center justify-between border-t border-stone-200 p-6">
+            <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-6 py-4">
               <Button
                 className="border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
                 variant="ghost"
@@ -1138,11 +1142,11 @@ export default function JobsPage() {
       {/* Modal conferma eliminazione */}
       {isMounted && showDeleteConfirm && selectedLavoro && createPortal(
         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-lg font-semibold text-slate-800">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]">
+            <h3 className="mb-2 text-[17px] font-bold tracking-[-0.02em] text-slate-900">
               Eliminare questo lavoro?
             </h3>
-            <p className="mb-5 text-sm text-slate-600">
+            <p className="mb-5 text-[13px] text-slate-500">
               Stai per eliminare il lavoro {selectedLavoro.code}. Questa
               azione non può essere annullata.
             </p>
@@ -1168,23 +1172,23 @@ export default function JobsPage() {
       {/* Modal nuovo lavoro */}
       {isMounted && isNewModalOpen && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md"
           onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
         >
           <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-start justify-between border-b border-stone-200 p-6">
+            <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Nuovo lavoro</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[18px] font-bold tracking-[-0.025em] text-slate-900">Nuovo lavoro</h2>
+                <p className="mt-1 text-[13px] text-slate-400">
                   Compila i campi per aggiungere un nuovo lavoro al laboratorio.
                 </p>
               </div>
               <button
-                className="ml-4 text-slate-400 hover:text-slate-600"
+                className="ml-4 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
               >
                 <X className="h-5 w-5" />
@@ -1195,7 +1199,7 @@ export default function JobsPage() {
             <div className="space-y-5 p-6">
               {/* Cliente */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Cliente <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1215,7 +1219,7 @@ export default function JobsPage() {
 
               {/* Tipo lavoro */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Tipo lavoro <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1235,7 +1239,7 @@ export default function JobsPage() {
 
               {/* Data consegna */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Data consegna <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1252,7 +1256,7 @@ export default function JobsPage() {
 
               {/* Descrizione */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Descrizione
                 </label>
                 <textarea
@@ -1266,7 +1270,7 @@ export default function JobsPage() {
 
               {/* Prezzo stimato */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Prezzo stimato (€)
                 </label>
                 <input
@@ -1281,7 +1285,7 @@ export default function JobsPage() {
 
               {/* Note interne */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Note interne
                 </label>
                 <textarea
@@ -1295,12 +1299,12 @@ export default function JobsPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex shrink-0 justify-end gap-3 border-t border-stone-200 p-6">
+            <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 px-6 py-4">
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => { setIsNewModalOpen(false); resetNewForm(); }}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-slate-600 hover:bg-stone-50 disabled:opacity-50"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50"
               >
                 Annulla
               </button>
@@ -1308,7 +1312,7 @@ export default function JobsPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleNewSubmit}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded-lg bg-amber-700 px-4 py-2 text-[13px] font-medium text-white shadow-sm shadow-amber-900/20 transition-all hover:bg-amber-800 active:scale-[0.98] disabled:opacity-50"
               >
                 {isSubmitting ? "Salvataggio..." : "Salva lavoro"}
               </button>
@@ -1321,15 +1325,15 @@ export default function JobsPage() {
       {/* Modal modifica lavoro */}
       {isMounted && isEditModalOpen && selectedLavoro && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md"
           onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
         >
           <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-start justify-between border-b border-stone-200 p-6">
+            <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
                   Modifica {selectedLavoro.code}
@@ -1339,7 +1343,7 @@ export default function JobsPage() {
                 </p>
               </div>
               <button
-                className="ml-4 text-slate-400 hover:text-slate-600"
+                className="ml-4 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
               >
                 <X className="h-5 w-5" />
@@ -1350,7 +1354,7 @@ export default function JobsPage() {
             <div className="space-y-5 p-6">
               {/* Cliente */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Cliente <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1370,7 +1374,7 @@ export default function JobsPage() {
 
               {/* Tipo lavoro */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Tipo lavoro <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1390,7 +1394,7 @@ export default function JobsPage() {
 
               {/* Data consegna */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Data consegna <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1406,7 +1410,7 @@ export default function JobsPage() {
 
               {/* Descrizione */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Descrizione
                 </label>
                 <textarea
@@ -1420,7 +1424,7 @@ export default function JobsPage() {
 
               {/* Prezzo stimato */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Prezzo stimato (€)
                 </label>
                 <input
@@ -1435,7 +1439,7 @@ export default function JobsPage() {
 
               {/* Note interne */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Note interne
                 </label>
                 <textarea
@@ -1449,12 +1453,12 @@ export default function JobsPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex shrink-0 justify-end gap-3 border-t border-stone-200 p-6">
+            <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 px-6 py-4">
               <button
                 type="button"
                 disabled={isEditSubmitting}
                 onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-slate-600 hover:bg-stone-50 disabled:opacity-50"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50"
               >
                 Annulla
               </button>
@@ -1462,7 +1466,7 @@ export default function JobsPage() {
                 type="button"
                 disabled={isEditSubmitting}
                 onClick={handleEditSubmit}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded-lg bg-amber-700 px-4 py-2 text-[13px] font-medium text-white shadow-sm shadow-amber-900/20 transition-all hover:bg-amber-800 active:scale-[0.98] disabled:opacity-50"
               >
                 {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
               </button>

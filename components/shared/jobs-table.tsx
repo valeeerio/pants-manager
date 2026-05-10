@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { jobs } from "@/lib/mock-data";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,43 +10,66 @@ export function JobsTable({ compact = false }: { compact?: boolean }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-slate-800">Lavori recenti</CardTitle>
+      <CardHeader className="pb-0">
+        <CardTitle className="text-[13px] font-semibold text-slate-800">Lavori recenti</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 pb-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Codice</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Lavorazione</TableHead>
-              <TableHead>Stato</TableHead>
-              <TableHead>Scadenza</TableHead>
-              <TableHead className="text-right">Importo</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Codice
+              </TableHead>
+              <TableHead className="py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Cliente
+              </TableHead>
+              <TableHead className="py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Lavorazione
+              </TableHead>
+              <TableHead className="py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Stato
+              </TableHead>
+              <TableHead className="py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Scadenza
+              </TableHead>
+              <TableHead className="py-3 pr-5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Importo
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visibleJobs.map((job) => (
-              <TableRow key={job.code}>
-                <TableCell className="font-medium text-slate-700">{job.code}</TableCell>
-                <TableCell>{job.customer}</TableCell>
-                <TableCell className="min-w-48">{job.work}</TableCell>
-                <TableCell>
+              <TableRow
+                key={job.code}
+                className="border-b border-slate-100/60 transition-colors hover:bg-slate-50/60"
+              >
+                <TableCell className="px-5 py-3 font-mono text-[12px] font-semibold text-slate-600">
+                  {job.code}
+                </TableCell>
+                <TableCell className="py-3 text-[13px] font-medium text-slate-800">
+                  {job.customer}
+                </TableCell>
+                <TableCell className="min-w-44 py-3 text-[13px] text-slate-600">{job.work}</TableCell>
+                <TableCell className="py-3">
                   <StatusBadge status={job.status} />
                 </TableCell>
-                <TableCell className="text-slate-600">{job.due}</TableCell>
-                <TableCell className="text-right font-medium">{job.amount}</TableCell>
+                <TableCell className="py-3 text-[12px] text-slate-500">{job.due}</TableCell>
+                <TableCell className="py-3 pr-5 text-right text-[13px] font-semibold text-slate-800">
+                  {job.amount}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
         {compact && (
-          <div className="mt-3 border-t pt-3">
+          <div className="border-t border-slate-100 px-5 py-3">
             <Link
               href="/lavori"
-              className="text-sm text-amber-700 hover:text-amber-800 hover:underline"
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-700 transition-colors hover:text-amber-800"
             >
-              Vedi tutti i lavori →
+              Vedi tutti i lavori
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         )}

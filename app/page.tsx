@@ -16,18 +16,19 @@ export default function DashboardPage() {
       <div className="-mx-4 -mt-6 mb-6 sm:-mx-6 lg:-mx-8">
         <Topbar />
       </div>
+
       <PageHeader
         title="Dashboard"
         description="Riepilogo dei lavori, consegne e pagamenti del laboratorio."
         actions={
-          <Button className="bg-amber-700 text-white hover:bg-amber-800">
+          <Button className="bg-amber-700 text-white shadow-sm shadow-amber-900/25 hover:bg-amber-800 hover:shadow-amber-glow active:scale-[0.98]">
             Nuovo lavoro
           </Button>
         }
       />
 
-      {/* Sezione 1 — 4 card principali */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Sezione 1 — 4 metric cards con TiltCard 3D */}
+      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric, index) => {
           const Icon = icons[index];
           return (
@@ -42,26 +43,26 @@ export default function DashboardPage() {
         })}
       </section>
 
-      {/* Sezione 2 — Tabella + Widget scadenze */}
-      <section className="grid gap-4 xl:grid-cols-[1.85fr_1fr]">
+      {/* Sezione 2 — Tabella lavori + Scadenze */}
+      <section className="grid gap-3.5 xl:grid-cols-[1.85fr_1fr]">
         <JobsTable compact />
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-slate-800">In scadenza questa settimana</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle>In scadenza questa settimana</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 pb-4">
             {deadlines.map((item, index) => (
               <div
                 key={index}
-                className="flex items-start justify-between gap-3 rounded-md border border-slate-100 bg-stone-50 px-3 py-2.5"
+                className="group flex items-start justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/50 px-3 py-2.5 transition-all duration-150 hover:border-slate-200 hover:bg-white hover:shadow-sm"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-800">{item.customer}</p>
-                  <p className="truncate text-xs text-slate-500">{item.work}</p>
+                  <p className="truncate text-[13px] font-medium text-slate-800">{item.customer}</p>
+                  <p className="truncate text-[11px] text-slate-400 mt-0.5">{item.work}</p>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <span className="text-xs font-medium text-amber-700">{item.due}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-[11px] font-semibold text-amber-700">{item.due}</span>
                   <StatusBadge status={item.status} />
                 </div>
               </div>
@@ -70,18 +71,22 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      {/* Sezione 3 — 4 card tipologie */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Sezione 3 — Tipologie di produzione */}
+      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {production.map((item) => (
-          <Card key={item.label}>
+          <Card key={item.label} className="group">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">{item.label}</span>
-                <span className="text-xl font-semibold text-slate-800">{item.value}%</span>
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[13px] font-medium text-slate-600">{item.label}</span>
+                <span className="text-[22px] font-bold tracking-[-0.04em] text-slate-900">
+                  {item.value}
+                  <span className="text-sm font-medium text-slate-400">%</span>
+                </span>
               </div>
-              <div className="mt-4 h-2 rounded-full bg-stone-200">
+              {/* Track */}
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-2 rounded-full bg-amber-500"
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-700"
                   style={{ width: `${item.value}%` }}
                 />
               </div>
@@ -90,15 +95,15 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      {/* Sezione 4 — Promemoria */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="flex items-center gap-4 p-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700">
-            <Bell className="h-5 w-5" />
+      {/* Sezione 4 — Promemoria premium */}
+      <Card className="border-amber-200/50 bg-gradient-to-r from-amber-50 to-orange-50/40">
+        <CardContent className="flex items-center gap-4 p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200/60">
+            <Bell className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-stone-700">Promemoria</p>
-            <p className="text-sm text-stone-600">2 consegne previste oggi</p>
+            <p className="text-[13px] font-semibold text-amber-900">Promemoria</p>
+            <p className="text-[12px] text-amber-800/70 mt-0.5">2 consegne previste oggi</p>
           </div>
         </CardContent>
       </Card>
