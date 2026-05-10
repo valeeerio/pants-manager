@@ -1,7 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { ClipboardList, Plus, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  ClipboardList,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  X,
+  Trash2,
+  RefreshCw,
+  Pencil,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -273,6 +284,29 @@ type SortKey =
   | "estimatedPrice";
 type SortOrder = "asc" | "desc";
 
+function Field({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  return (
+    <div>
+      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="text-sm font-medium text-slate-800">
+        {value != null && value !== "" ? (
+          value
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function SortIndicator({
   active,
   order,
@@ -299,6 +333,12 @@ function localDateStr(date: Date): string {
 }
 
 export default function JobsPage() {
+  const router = useRouter();
+
+  // List state (mutable for delete / status change)
+  const [jobs, setJobs] = useState<Job[]>(allJobs);
+
+  // Filter + sort
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDueDate, setFilterDueDate] = useState("");
@@ -309,12 +349,19 @@ export default function JobsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  // Modal
+  const [selectedLavoro, setSelectedLavoro] = useState<Job | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [quickStatusValue, setQuickStatusValue] = useState("");
+  const [showStatusChange, setShowStatusChange] = useState(false);
+
   const filteredAndSorted = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const todayStr = localDateStr(now);
 
-    let result = [...allJobs];
+    let result = [...jobs];
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -375,7 +422,7 @@ export default function JobsPage() {
     });
 
     return result;
-  }, [searchQuery, filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
+  }, [jobs, searchQuery, filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
 
   function handleSort(col: SortKey) {
     if (sortBy === col) {
@@ -393,6 +440,46 @@ export default function JobsPage() {
     setFilterType("");
     setDateFrom("");
     setDateTo("");
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowDeleteConfirm(false);
+        setIsModalOpen(false);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  function openModal(job: Job) {
+    setSelectedLavoro(job);
+    setQuickStatusValue(job.status);
+    setShowStatusChange(false);
+    setShowDeleteConfirm(false);
+    setIsModalOpen(true);
+  }
+
+  function applyStatusChange() {
+    if (!selectedLavoro) return;
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.id === selectedLavoro.id ? { ...j, status: quickStatusValue } : j
+      )
+    );
+    setSelectedLavoro((prev) =>
+      prev ? { ...prev, status: quickStatusValue } : null
+    );
+    setShowStatusChange(false);
+  }
+
+  function deleteLavoro() {
+    if (!selectedLavoro) return;
+    setJobs((prev) => prev.filter((j) => j.id !== selectedLavoro.id));
+    setShowDeleteConfirm(false);
+    setIsModalOpen(false);
+    setSelectedLavoro(null);
   }
 
   const visibleJobs = filteredAndSorted.slice(0, showMore);
@@ -623,7 +710,11 @@ export default function JobsPage() {
             </TableHeader>
             <TableBody>
               {visibleJobs.map((job) => (
-                <TableRow key={job.code}>
+                <TableRow
+                  key={job.code}
+                  className="cursor-pointer hover:bg-amber-50"
+                  onClick={() => openModal(job)}
+                >
                   <TableCell className="font-medium text-slate-700">
                     {job.code}
                   </TableCell>
@@ -683,6 +774,191 @@ export default function JobsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal dettaglio lavoro */}
+      {isModalOpen && selectedLavoro && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-stone-200 p-6">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-800">
+                  {selectedLavoro.code}
+                </h2>
+                <Badge
+                  className={
+                    STATUS_COLORS[selectedLavoro.status] ??
+                    "border-transparent bg-slate-200 text-slate-800"
+                  }
+                >
+                  {selectedLavoro.status}
+                </Badge>
+              </div>
+              <button
+                className="text-slate-400 hover:text-slate-600"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Cliente" value={selectedLavoro.clientName} />
+                <Field label="Tipo lavoro" value={selectedLavoro.type} />
+                <Field
+                  label="Data ricezione"
+                  value={selectedLavoro.receivedDate}
+                />
+                <Field
+                  label="Data consegna"
+                  value={selectedLavoro.dueDate}
+                />
+                <Field
+                  label="Prezzo stimato"
+                  value={`€ ${selectedLavoro.estimatedPrice}`}
+                />
+                <Field
+                  label="Prezzo finale"
+                  value={
+                    selectedLavoro.finalPrice != null
+                      ? `€ ${selectedLavoro.finalPrice}`
+                      : null
+                  }
+                />
+              </div>
+              <div className="mt-4 space-y-4">
+                <Field label="Titolo lavoro" value={selectedLavoro.title} />
+                <Field
+                  label="Descrizione"
+                  value={selectedLavoro.description}
+                />
+                <div>
+                  <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+                    Note interne
+                  </p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {selectedLavoro.notes ?? (
+                      <span className="text-slate-400">Nessuna nota</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Sezione cambia stato (inline) */}
+            {showStatusChange && (
+              <div className="shrink-0 border-t border-stone-100 px-6 pb-4 pt-4">
+                <p className="mb-2 text-sm text-slate-600">
+                  Seleziona nuovo stato:
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={quickStatusValue}
+                    onChange={(e) => setQuickStatusValue(e.target.value)}
+                    className={`${SELECT_CLASS} flex-1`}
+                  >
+                    <option value="Da iniziare">Da iniziare</option>
+                    <option value="In lavorazione">In lavorazione</option>
+                    <option value="In attesa cliente">
+                      In attesa cliente
+                    </option>
+                    <option value="Pronto">Pronto</option>
+                    <option value="Consegnato">Consegnato</option>
+                    <option value="Annullato">Annullato</option>
+                  </select>
+                  <Button
+                    className="bg-amber-600 text-white hover:bg-amber-700"
+                    onClick={applyStatusChange}
+                  >
+                    Conferma
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowStatusChange(false)}
+                  >
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex shrink-0 items-center justify-between border-t border-stone-200 p-6">
+              <Button
+                className="border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                variant="ghost"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Elimina
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="border-stone-300 hover:bg-stone-50"
+                  onClick={() => setShowStatusChange((v) => !v)}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Cambia stato
+                </Button>
+                <Button
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                  onClick={() =>
+                    router.push(`/lavori/${selectedLavoro.id}/modifica`)
+                  }
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Modifica
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-stone-300 hover:bg-stone-50"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Chiudi
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal conferma eliminazione */}
+      {showDeleteConfirm && selectedLavoro && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold text-slate-800">
+              Eliminare questo lavoro?
+            </h3>
+            <p className="mb-5 text-sm text-slate-600">
+              Stai per eliminare il lavoro {selectedLavoro.code}. Questa
+              azione non può essere annullata.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Annulla
+              </Button>
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={deleteLavoro}
+              >
+                Elimina
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
