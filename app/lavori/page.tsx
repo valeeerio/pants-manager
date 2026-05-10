@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ClipboardList,
   Plus,
@@ -355,6 +356,11 @@ export default function JobsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quickStatusValue, setQuickStatusValue] = useState("");
   const [showStatusChange, setShowStatusChange] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const filteredAndSorted = useMemo(() => {
     const now = new Date();
@@ -776,7 +782,7 @@ export default function JobsPage() {
       </Card>
 
       {/* Modal dettaglio lavoro */}
-      {isModalOpen && selectedLavoro && (
+      {isMounted && isModalOpen && selectedLavoro && createPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setIsModalOpen(false)}
@@ -928,11 +934,12 @@ export default function JobsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal conferma eliminazione */}
-      {showDeleteConfirm && selectedLavoro && (
+      {isMounted && showDeleteConfirm && selectedLavoro && createPortal(
         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-lg font-semibold text-slate-800">
@@ -957,7 +964,8 @@ export default function JobsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
