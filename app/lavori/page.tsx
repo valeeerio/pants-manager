@@ -14,7 +14,6 @@ import {
   Pencil,
   CheckCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -362,8 +361,6 @@ function localDateStr(date: Date): string {
 }
 
 export default function JobsPage() {
-  const router = useRouter();
-
   // List state (mutable for delete / status change)
   const [jobs, setJobs] = useState<Job[]>(allJobs);
 
@@ -388,6 +385,7 @@ export default function JobsPage() {
 
   // Banner successo
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -405,6 +403,23 @@ export default function JobsPage() {
     dataConsegna: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Modal modifica lavoro
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editCliente, setEditCliente] = useState("");
+  const [editTitolo, setEditTitolo] = useState("");
+  const [editTipoLavoro, setEditTipoLavoro] = useState("");
+  const [editDataConsegna, setEditDataConsegna] = useState("");
+  const [editDescrizione, setEditDescrizione] = useState("");
+  const [editPrezzoStimato, setEditPrezzoStimato] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editErrors, setEditErrors] = useState({
+    cliente: "",
+    titolo: "",
+    tipoLavoro: "",
+    dataConsegna: "",
+  });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -551,13 +566,81 @@ export default function JobsPage() {
       setIsSubmitting(false);
       setIsNewModalOpen(false);
       resetNewForm();
+      setSuccessMessage("Lavoro creato con successo!");
+      setShowSuccessBanner(true);
+      setTimeout(() => setShowSuccessBanner(false), 3000);
+    }, 500);
+  }
+
+  function openEditModal(lavoro: Job) {
+    setEditCliente(lavoro.clientName);
+    setEditTitolo(lavoro.title);
+    setEditTipoLavoro(lavoro.type);
+    setEditDataConsegna(lavoro.dueDate);
+    setEditDescrizione(lavoro.description || "");
+    setEditPrezzoStimato(lavoro.estimatedPrice?.toString() || "");
+    setEditNote(lavoro.notes || "");
+    setEditErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setIsModalOpen(false);
+    setIsEditModalOpen(true);
+  }
+
+  function resetEditForm() {
+    setEditCliente("");
+    setEditTitolo("");
+    setEditTipoLavoro("");
+    setEditDataConsegna("");
+    setEditDescrizione("");
+    setEditPrezzoStimato("");
+    setEditNote("");
+    setEditErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setIsEditSubmitting(false);
+  }
+
+  function validateEditForm(): boolean {
+    const next = { cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" };
+    let valid = true;
+
+    if (!editCliente) { next.cliente = "Seleziona un cliente"; valid = false; }
+    if (!editTitolo.trim()) { next.titolo = "Inserisci un titolo per il lavoro"; valid = false; }
+    if (!editTipoLavoro) { next.tipoLavoro = "Seleziona il tipo di lavoro"; valid = false; }
+    if (!editDataConsegna) { next.dataConsegna = "Inserisci una data di consegna"; valid = false; }
+
+    setEditErrors(next);
+    return valid;
+  }
+
+  function handleEditSubmit() {
+    if (!validateEditForm()) return;
+    setIsEditSubmitting(true);
+    setTimeout(() => {
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === selectedLavoro!.id
+            ? {
+                ...j,
+                clientName: editCliente,
+                title: editTitolo,
+                type: editTipoLavoro,
+                dueDate: editDataConsegna,
+                description: editDescrizione || "",
+                estimatedPrice: parseFloat(editPrezzoStimato) || 0,
+                notes: editNote || null,
+              }
+            : j
+        )
+      );
+      setIsEditSubmitting(false);
+      setIsEditModalOpen(false);
+      resetEditForm();
+      setSuccessMessage("Lavoro modificato con successo!");
       setShowSuccessBanner(true);
       setTimeout(() => setShowSuccessBanner(false), 3000);
     }, 500);
   }
 
   useEffect(() => {
-    const isAnyModalOpen = isModalOpen || isNewModalOpen;
+    const isAnyModalOpen = isModalOpen || isNewModalOpen || isEditModalOpen;
     if (isAnyModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -566,14 +649,20 @@ export default function JobsPage() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isModalOpen, isNewModalOpen]);
+  }, [isModalOpen, isNewModalOpen, isEditModalOpen]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        if (isEditModalOpen) {
+          setIsEditModalOpen(false);
+          resetEditForm();
+          return;
+        }
         if (isNewModalOpen) {
           setIsNewModalOpen(false);
           resetNewForm();
+          return;
         }
         setShowDeleteConfirm(false);
         setIsModalOpen(false);
@@ -581,7 +670,7 @@ export default function JobsPage() {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isNewModalOpen]);
+  }, [isNewModalOpen, isEditModalOpen]);
 
   function openModal(job: Job) {
     setSelectedLavoro(job);
@@ -634,9 +723,7 @@ export default function JobsPage() {
       {showSuccessBanner && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
           <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
-          <p className="text-sm font-medium text-green-700">
-            Lavoro creato con successo!
-          </p>
+          <p className="text-sm font-medium text-green-700">{successMessage}</p>
         </div>
       )}
 
@@ -1053,9 +1140,7 @@ export default function JobsPage() {
                 </Button>
                 <Button
                   className="bg-amber-600 text-white hover:bg-amber-700"
-                  onClick={() =>
-                    router.push(`/lavori/${selectedLavoro.id}/modifica`)
-                  }
+                  onClick={() => openEditModal(selectedLavoro)}
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Modifica
@@ -1267,6 +1352,177 @@ export default function JobsPage() {
                 className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
               >
                 {isSubmitting ? "Salvataggio..." : "Salva lavoro"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal modifica lavoro */}
+      {isMounted && isEditModalOpen && selectedLavoro && createPortal(
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
+        >
+          <div
+            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-start justify-between border-b border-stone-200 p-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">
+                  Modifica {selectedLavoro.code}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Modifica i dati del lavoro selezionato.
+                </p>
+              </div>
+              <button
+                className="ml-4 text-slate-400 hover:text-slate-600"
+                onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="space-y-5 p-6">
+              {/* Cliente */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Cliente <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editCliente}
+                  onChange={(e) => setEditCliente(e.target.value)}
+                  className={editErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                >
+                  <option value="">Seleziona un cliente</option>
+                  {CLIENTI.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {editErrors.cliente && (
+                  <p className="mt-1 text-sm text-red-500">{editErrors.cliente}</p>
+                )}
+              </div>
+
+              {/* Titolo */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Titolo lavoro <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editTitolo}
+                  onChange={(e) => setEditTitolo(e.target.value)}
+                  placeholder="Es. Orlo pantalone elegante"
+                  className={editErrors.titolo ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {editErrors.titolo && (
+                  <p className="mt-1 text-sm text-red-500">{editErrors.titolo}</p>
+                )}
+              </div>
+
+              {/* Tipo lavoro */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Tipo lavoro <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editTipoLavoro}
+                  onChange={(e) => setEditTipoLavoro(e.target.value)}
+                  className={editErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                >
+                  <option value="">Seleziona tipo lavoro</option>
+                  {TIPI_LAVORO.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                {editErrors.tipoLavoro && (
+                  <p className="mt-1 text-sm text-red-500">{editErrors.tipoLavoro}</p>
+                )}
+              </div>
+
+              {/* Data consegna */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Data consegna <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={editDataConsegna}
+                  onChange={(e) => setEditDataConsegna(e.target.value)}
+                  className={editErrors.dataConsegna ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {editErrors.dataConsegna && (
+                  <p className="mt-1 text-sm text-red-500">{editErrors.dataConsegna}</p>
+                )}
+              </div>
+
+              {/* Descrizione */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Descrizione
+                </label>
+                <textarea
+                  value={editDescrizione}
+                  onChange={(e) => setEditDescrizione(e.target.value)}
+                  placeholder="Descrivi il lavoro da svolgere..."
+                  rows={3}
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+
+              {/* Prezzo stimato */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Prezzo stimato (€)
+                </label>
+                <input
+                  type="number"
+                  value={editPrezzoStimato}
+                  onChange={(e) => setEditPrezzoStimato(e.target.value)}
+                  placeholder="0"
+                  min={0}
+                  className={FIELD_CLASS}
+                />
+              </div>
+
+              {/* Note interne */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Note interne
+                </label>
+                <textarea
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  placeholder="Note riservate al laboratorio..."
+                  rows={3}
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex shrink-0 justify-end gap-3 border-t border-stone-200 p-6">
+              <button
+                type="button"
+                disabled={isEditSubmitting}
+                onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-slate-600 hover:bg-stone-50 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                disabled={isEditSubmitting}
+                onClick={handleEditSubmit}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
               </button>
             </div>
           </div>
