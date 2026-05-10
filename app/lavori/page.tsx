@@ -305,7 +305,6 @@ const SELECT_CLASS =
 type SortKey =
   | "code"
   | "clientName"
-  | "title"
   | "type"
   | "status"
   | "dueDate"
@@ -390,7 +389,6 @@ export default function JobsPage() {
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState("");
-  const [newTitolo, setNewTitolo] = useState("");
   const [newTipoLavoro, setNewTipoLavoro] = useState("");
   const [newDataConsegna, setNewDataConsegna] = useState("");
   const [newDescrizione, setNewDescrizione] = useState("");
@@ -398,7 +396,6 @@ export default function JobsPage() {
   const [newNote, setNewNote] = useState("");
   const [newErrors, setNewErrors] = useState({
     cliente: "",
-    titolo: "",
     tipoLavoro: "",
     dataConsegna: "",
   });
@@ -407,7 +404,6 @@ export default function JobsPage() {
   // Modal modifica lavoro
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editCliente, setEditCliente] = useState("");
-  const [editTitolo, setEditTitolo] = useState("");
   const [editTipoLavoro, setEditTipoLavoro] = useState("");
   const [editDataConsegna, setEditDataConsegna] = useState("");
   const [editDescrizione, setEditDescrizione] = useState("");
@@ -415,7 +411,6 @@ export default function JobsPage() {
   const [editNote, setEditNote] = useState("");
   const [editErrors, setEditErrors] = useState({
     cliente: "",
-    titolo: "",
     tipoLavoro: "",
     dataConsegna: "",
   });
@@ -437,7 +432,7 @@ export default function JobsPage() {
       result = result.filter(
         (j) =>
           j.clientName.toLowerCase().includes(q) ||
-          j.title.toLowerCase().includes(q) ||
+          j.type.toLowerCase().includes(q) ||
           j.code.toLowerCase().includes(q)
       );
     }
@@ -513,23 +508,21 @@ export default function JobsPage() {
 
   function resetNewForm() {
     setNewCliente("");
-    setNewTitolo("");
     setNewTipoLavoro("");
     setNewDataConsegna("");
     setNewDescrizione("");
     setNewPrezzoStimato("");
     setNewNote("");
-    setNewErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setNewErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
     setIsSubmitting(false);
   }
 
   function validateNewForm(): boolean {
     const today = localDateStr(new Date());
-    const next = { cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" };
+    const next = { cliente: "", tipoLavoro: "", dataConsegna: "" };
     let valid = true;
 
     if (!newCliente) { next.cliente = "Seleziona un cliente"; valid = false; }
-    if (!newTitolo.trim()) { next.titolo = "Inserisci un titolo per il lavoro"; valid = false; }
     if (!newTipoLavoro) { next.tipoLavoro = "Seleziona il tipo di lavoro"; valid = false; }
     if (!newDataConsegna) {
       next.dataConsegna = "Inserisci una data di consegna";
@@ -551,7 +544,7 @@ export default function JobsPage() {
       id: newId,
       code: `GS-${String(newId).padStart(3, "0")}`,
       clientName: newCliente,
-      title: newTitolo,
+      title: newTipoLavoro,
       type: newTipoLavoro,
       status: "Da iniziare",
       receivedDate: localDateStr(new Date()),
@@ -574,35 +567,32 @@ export default function JobsPage() {
 
   function openEditModal(lavoro: Job) {
     setEditCliente(lavoro.clientName);
-    setEditTitolo(lavoro.title);
     setEditTipoLavoro(lavoro.type);
     setEditDataConsegna(lavoro.dueDate);
     setEditDescrizione(lavoro.description || "");
     setEditPrezzoStimato(lavoro.estimatedPrice?.toString() || "");
     setEditNote(lavoro.notes || "");
-    setEditErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setEditErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
     setIsModalOpen(false);
     setIsEditModalOpen(true);
   }
 
   function resetEditForm() {
     setEditCliente("");
-    setEditTitolo("");
     setEditTipoLavoro("");
     setEditDataConsegna("");
     setEditDescrizione("");
     setEditPrezzoStimato("");
     setEditNote("");
-    setEditErrors({ cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" });
+    setEditErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
     setIsEditSubmitting(false);
   }
 
   function validateEditForm(): boolean {
-    const next = { cliente: "", titolo: "", tipoLavoro: "", dataConsegna: "" };
+    const next = { cliente: "", tipoLavoro: "", dataConsegna: "" };
     let valid = true;
 
     if (!editCliente) { next.cliente = "Seleziona un cliente"; valid = false; }
-    if (!editTitolo.trim()) { next.titolo = "Inserisci un titolo per il lavoro"; valid = false; }
     if (!editTipoLavoro) { next.tipoLavoro = "Seleziona il tipo di lavoro"; valid = false; }
     if (!editDataConsegna) { next.dataConsegna = "Inserisci una data di consegna"; valid = false; }
 
@@ -620,7 +610,7 @@ export default function JobsPage() {
             ? {
                 ...j,
                 clientName: editCliente,
-                title: editTitolo,
+                title: editTipoLavoro,
                 type: editTipoLavoro,
                 dueDate: editDataConsegna,
                 description: editDescrizione || "",
@@ -890,16 +880,6 @@ export default function JobsPage() {
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none whitespace-nowrap"
-                  onClick={() => handleSort("title")}
-                >
-                  Titolo lavoro
-                  <SortIndicator
-                    active={sortBy === "title"}
-                    order={sortOrder}
-                  />
-                </TableHead>
-                <TableHead
-                  className="hidden cursor-pointer select-none whitespace-nowrap md:table-cell"
                   onClick={() => handleSort("type")}
                 >
                   Tipo
@@ -948,10 +928,7 @@ export default function JobsPage() {
                     {job.code}
                   </TableCell>
                   <TableCell>{job.clientName}</TableCell>
-                  <TableCell className="min-w-[12rem]">{job.title}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {job.type}
-                  </TableCell>
+                  <TableCell>{job.type}</TableCell>
                   <TableCell>
                     <Badge
                       className={
@@ -1064,7 +1041,6 @@ export default function JobsPage() {
                 />
               </div>
               <div className="mt-4 space-y-4">
-                <Field label="Titolo lavoro" value={selectedLavoro.title} />
                 <Field
                   label="Descrizione"
                   value={selectedLavoro.description}
@@ -1237,23 +1213,6 @@ export default function JobsPage() {
                 )}
               </div>
 
-              {/* Titolo */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Titolo lavoro <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newTitolo}
-                  onChange={(e) => setNewTitolo(e.target.value)}
-                  placeholder="Es. Orlo pantalone elegante"
-                  className={newErrors.titolo ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {newErrors.titolo && (
-                  <p className="mt-1 text-sm text-red-500">{newErrors.titolo}</p>
-                )}
-              </div>
-
               {/* Tipo lavoro */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -1406,23 +1365,6 @@ export default function JobsPage() {
                 </select>
                 {editErrors.cliente && (
                   <p className="mt-1 text-sm text-red-500">{editErrors.cliente}</p>
-                )}
-              </div>
-
-              {/* Titolo */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Titolo lavoro <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editTitolo}
-                  onChange={(e) => setEditTitolo(e.target.value)}
-                  placeholder="Es. Orlo pantalone elegante"
-                  className={editErrors.titolo ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.titolo && (
-                  <p className="mt-1 text-sm text-red-500">{editErrors.titolo}</p>
                 )}
               </div>
 
