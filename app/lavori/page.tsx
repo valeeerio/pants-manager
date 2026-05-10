@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ClipboardList, Plus, ChevronUp, ChevronDown } from "lucide-react";
+import { ClipboardList, Plus, ChevronUp, ChevronDown, Search } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -299,6 +299,7 @@ function localDateStr(date: Date): string {
 }
 
 export default function JobsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDueDate, setFilterDueDate] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -314,6 +315,16 @@ export default function JobsPage() {
     const todayStr = localDateStr(now);
 
     let result = [...allJobs];
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (j) =>
+          j.clientName.toLowerCase().includes(q) ||
+          j.title.toLowerCase().includes(q) ||
+          j.code.toLowerCase().includes(q)
+      );
+    }
 
     if (filterStatus) {
       result = result.filter((j) => j.status === filterStatus);
@@ -364,7 +375,7 @@ export default function JobsPage() {
     });
 
     return result;
-  }, [filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
+  }, [searchQuery, filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
 
   function handleSort(col: SortKey) {
     if (sortBy === col) {
@@ -376,6 +387,7 @@ export default function JobsPage() {
   }
 
   function resetFilters() {
+    setSearchQuery("");
     setFilterStatus("");
     setFilterDueDate("");
     setFilterType("");
@@ -422,6 +434,22 @@ export default function JobsPage() {
         <CardContent className="p-0">
           {/* Barra filtri */}
           <div className="flex flex-wrap items-end gap-3 border-b bg-stone-50 px-4 py-3">
+            <div className="flex flex-col gap-1 min-w-[260px] flex-1">
+              <label className="text-xs font-medium text-slate-500">
+                Cerca
+              </label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cerca cliente, titolo o codice..."
+                  className="h-9 pl-8 text-sm"
+                />
+              </div>
+            </div>
+
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">
                 Stato
