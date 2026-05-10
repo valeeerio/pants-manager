@@ -31,8 +31,7 @@ export const payments = [
 export const production = [
   { label: "Orli e accorciature", value: 38 },
   { label: "Modifiche vita e fianchi", value: 29 },
-  { label: "Riparazioni e zip", value: 21 },
-  { label: "Su misura", value: 12 }
+  { label: "Riparazioni e zip", value: 21 },  { label: "Su misura", value: 12 }
 ];
 
 export const deadlines = [
