@@ -33,6 +33,7 @@ type Cliente = {
   nome: string;
   cognome: string;
   telefono: string;
+  citta: string;
   email: string | null;
   note: string | null;
   dataRegistrazione: string;
@@ -62,9 +63,8 @@ type SortKey =
   | "nome"
   | "cognome"
   | "telefono"
-  | "numeroLavori"
-  | "lavoriAttivi"
-  | "dataRegistrazione";
+  | "citta"
+  | "lavoriAttivi";
 type SortOrder = "asc" | "desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,19 +94,19 @@ function emptyErrors(): FormErrors {
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
 const CLIENTI_INIZIALI: Cliente[] = [
-  { id: "CL-001", nome: "Mario",     cognome: "Rossi",    telefono: "333-1234567", email: "mario.rossi@email.it",      note: null,                                       dataRegistrazione: "2024-03-15", numeroLavori: 4, lavoriAttivi: 2 },
-  { id: "CL-002", nome: "Luca",      cognome: "Bianchi",  telefono: "347-2345678", email: "luca.bianchi@email.it",     note: "Cliente puntuale nei ritiri",              dataRegistrazione: "2023-11-08", numeroLavori: 3, lavoriAttivi: 1 },
-  { id: "CL-003", nome: "Anna",      cognome: "Verdi",    telefono: "328-3456789", email: "anna.verdi@email.it",       note: null,                                       dataRegistrazione: "2024-06-22", numeroLavori: 5, lavoriAttivi: 2 },
-  { id: "CL-004", nome: "Giuseppe",  cognome: "Neri",     telefono: "366-4567890", email: null,                        note: "Preferisce essere contattato al mattino",  dataRegistrazione: "2025-02-14", numeroLavori: 3, lavoriAttivi: 1 },
-  { id: "CL-005", nome: "Francesca", cognome: "Conti",    telefono: "391-5678901", email: "francesca.conti@email.it",  note: null,                                       dataRegistrazione: "2024-09-03", numeroLavori: 2, lavoriAttivi: 0 },
-  { id: "CL-006", nome: "Roberto",   cognome: "Ferrara",  telefono: "349-6789012", email: null,                        note: "Pantalone su misura in lavorazione",       dataRegistrazione: "2025-07-29", numeroLavori: 2, lavoriAttivi: 1 },
-  { id: "CL-007", nome: "Valentina", cognome: "Marino",   telefono: "335-7890123", email: "v.marino@libero.it",        note: "Clientela fedele, sconto del 10% concordato", dataRegistrazione: "2024-01-18", numeroLavori: 6, lavoriAttivi: 3 },
-  { id: "CL-008", nome: "Carlo",     cognome: "Esposito", telefono: "320-8901234", email: null,                        note: null,                                       dataRegistrazione: "2026-04-07", numeroLavori: 1, lavoriAttivi: 0 },
-  { id: "CL-009", nome: "Paola",     cognome: "Ricci",    telefono: "389-9012345", email: "paola.ricci@gmail.com",     note: "Porta spesso capi di sartoria di pregio",  dataRegistrazione: "2023-05-11", numeroLavori: 8, lavoriAttivi: 4 },
-  { id: "CL-010", nome: "Davide",    cognome: "Lombardi", telefono: "340-0123456", email: null,                        note: null,                                       dataRegistrazione: "2026-05-03", numeroLavori: 0, lavoriAttivi: 0 },
-  { id: "CL-011", nome: "Silvia",    cognome: "Gallo",    telefono: "377-1234509", email: "silvia.gallo@email.it",     note: "Referenziata da Anna Verdi",               dataRegistrazione: "2025-09-15", numeroLavori: 7, lavoriAttivi: 3 },
-  { id: "CL-012", nome: "Marco",     cognome: "Fabbri",   telefono: "368-2345670", email: null,                        note: "Richiede sempre ricevuta",                 dataRegistrazione: "2026-02-28", numeroLavori: 2, lavoriAttivi: 1 },
-  { id: "CL-013", nome: "Elena",     cognome: "Russo",    telefono: "344-3456781", email: "elena.russo@email.it",      note: null,                                       dataRegistrazione: "2026-05-01", numeroLavori: 4, lavoriAttivi: 2 },
+  { id: "CL-001", nome: "Mario",     cognome: "Rossi",    telefono: "333-1234567", citta: "Milano",  email: "mario.rossi@email.it",      note: null,                                       dataRegistrazione: "2024-03-15", numeroLavori: 4, lavoriAttivi: 2 },
+  { id: "CL-002", nome: "Luca",      cognome: "Bianchi",  telefono: "347-2345678", citta: "Torino",  email: "luca.bianchi@email.it",     note: "Cliente puntuale nei ritiri",              dataRegistrazione: "2023-11-08", numeroLavori: 3, lavoriAttivi: 1 },
+  { id: "CL-003", nome: "Anna",      cognome: "Verdi",    telefono: "328-3456789", citta: "Roma",    email: "anna.verdi@email.it",       note: null,                                       dataRegistrazione: "2024-06-22", numeroLavori: 5, lavoriAttivi: 2 },
+  { id: "CL-004", nome: "Giuseppe",  cognome: "Neri",     telefono: "366-4567890", citta: "Napoli",  email: null,                        note: "Preferisce essere contattato al mattino",  dataRegistrazione: "2025-02-14", numeroLavori: 3, lavoriAttivi: 1 },
+  { id: "CL-005", nome: "Francesca", cognome: "Conti",    telefono: "391-5678901", citta: "Bologna", email: "francesca.conti@email.it",  note: null,                                       dataRegistrazione: "2024-09-03", numeroLavori: 2, lavoriAttivi: 0 },
+  { id: "CL-006", nome: "Roberto",   cognome: "Ferrara",  telefono: "349-6789012", citta: "Firenze", email: null,                        note: "Pantalone su misura in lavorazione",       dataRegistrazione: "2025-07-29", numeroLavori: 2, lavoriAttivi: 1 },
+  { id: "CL-007", nome: "Valentina", cognome: "Marino",   telefono: "335-7890123", citta: "Genova",  email: "v.marino@libero.it",        note: "Clientela fedele, sconto del 10% concordato", dataRegistrazione: "2024-01-18", numeroLavori: 6, lavoriAttivi: 3 },
+  { id: "CL-008", nome: "Carlo",     cognome: "Esposito", telefono: "320-8901234", citta: "Palermo", email: null,                        note: null,                                       dataRegistrazione: "2026-04-07", numeroLavori: 1, lavoriAttivi: 0 },
+  { id: "CL-009", nome: "Paola",     cognome: "Ricci",    telefono: "389-9012345", citta: "Bari",    email: "paola.ricci@gmail.com",     note: "Porta spesso capi di sartoria di pregio",  dataRegistrazione: "2023-05-11", numeroLavori: 8, lavoriAttivi: 4 },
+  { id: "CL-010", nome: "Davide",    cognome: "Lombardi", telefono: "340-0123456", citta: "Verona",  email: null,                        note: null,                                       dataRegistrazione: "2026-05-03", numeroLavori: 0, lavoriAttivi: 0 },
+  { id: "CL-011", nome: "Silvia",    cognome: "Gallo",    telefono: "377-1234509", citta: "Catania", email: "silvia.gallo@email.it",     note: "Referenziata da Anna Verdi",               dataRegistrazione: "2025-09-15", numeroLavori: 7, lavoriAttivi: 3 },
+  { id: "CL-012", nome: "Marco",     cognome: "Fabbri",   telefono: "368-2345670", citta: "Venezia", email: null,                        note: "Richiede sempre ricevuta",                 dataRegistrazione: "2026-02-28", numeroLavori: 2, lavoriAttivi: 1 },
+  { id: "CL-013", nome: "Elena",     cognome: "Russo",    telefono: "344-3456781", citta: "Trieste", email: "elena.russo@email.it",      note: null,                                       dataRegistrazione: "2026-05-01", numeroLavori: 4, lavoriAttivi: 2 },
 ];
 
 // lavoriAttivi = stati NON "Consegnato" e NON "Annullato"
@@ -416,6 +416,7 @@ export default function ClientiPage() {
       nome: newNome.trim(),
       cognome: newCognome.trim(),
       telefono: newTelefono.trim(),
+      citta: "",
       email: newEmail.trim() || null,
       note: newNote.trim() || null,
       dataRegistrazione: todayISO(),
@@ -596,14 +597,15 @@ export default function ClientiPage() {
                 <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("telefono")}>
                   Telefono <SortIndicator active={sortBy === "telefono"} order={sortOrder} />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("numeroLavori")}>
-                  Lavori <SortIndicator active={sortBy === "numeroLavori"} order={sortOrder} />
+                <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("citta")}>
+                  Città <SortIndicator active={sortBy === "citta"} order={sortOrder} />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("lavoriAttivi")}>
-                  Attivi <SortIndicator active={sortBy === "lavoriAttivi"} order={sortOrder} />
-                </TableHead>
-                <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("dataRegistrazione")}>
-                  Data registrazione <SortIndicator active={sortBy === "dataRegistrazione"} order={sortOrder} />
+                <TableHead
+                  className="cursor-pointer select-none whitespace-nowrap"
+                  title="Totali / In corso"
+                  onClick={() => handleSort("lavoriAttivi")}
+                >
+                  Lavori <SortIndicator active={sortBy === "lavoriAttivi"} order={sortOrder} />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -617,22 +619,22 @@ export default function ClientiPage() {
                   <TableCell className="font-medium text-slate-800">{cliente.nome}</TableCell>
                   <TableCell className="text-slate-700">{cliente.cognome}</TableCell>
                   <TableCell className="font-mono text-[12px] text-slate-600">{cliente.telefono}</TableCell>
-                  <TableCell className="text-slate-700">{cliente.numeroLavori}</TableCell>
+                  <TableCell className="text-slate-700">{cliente.citta}</TableCell>
                   <TableCell>
                     {cliente.lavoriAttivi > 0 ? (
-                      <span className="font-semibold text-amber-700">{cliente.lavoriAttivi}</span>
+                      <span className="text-slate-700">
+                        {cliente.numeroLavori}{" "}
+                        <span className="font-semibold text-amber-700">/ {cliente.lavoriAttivi}</span>
+                      </span>
                     ) : (
-                      <span className="text-slate-400">0</span>
+                      <span className="text-slate-500">{cliente.numeroLavori} / 0</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-[12px] text-slate-500">
-                    {formatDataIt(cliente.dataRegistrazione)}
                   </TableCell>
                 </TableRow>
               ))}
               {visibleClienti.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-400">
+                  <TableCell colSpan={5} className="py-10 text-center text-slate-400">
                     Nessun cliente trovato. Prova a modificare i filtri.
                   </TableCell>
                 </TableRow>
@@ -745,6 +747,12 @@ export default function ClientiPage() {
                       {selectedCliente.telefono}
                     </a>
                   </div>
+                  {selectedCliente.citta && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Città</p>
+                      <p className="text-[13px] font-medium text-slate-700">{selectedCliente.citta}</p>
+                    </div>
+                  )}
                   {selectedCliente.email && (
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Email</p>
