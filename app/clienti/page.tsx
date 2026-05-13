@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   Search,
   X,
   Pencil,
@@ -55,8 +56,21 @@ type FormErrors = {
   nome: string;
   cognome: string;
   telefono: string;
+  citta: string;
   email: string;
   duplicato: string;
+};
+
+type LavoroForm = {
+  localId: number;
+  codiceLavoro: string;
+  tipoLavoro: string;
+  stato: string;
+  dataConsegna: string;
+  prezzo: string;
+  descrizione: string;
+  expanded: boolean;
+  errors: { tipoLavoro: boolean; stato: boolean; dataConsegna: boolean; prezzo: boolean };
 };
 
 type SortKey =
@@ -64,7 +78,8 @@ type SortKey =
   | "cognome"
   | "telefono"
   | "citta"
-  | "lavoriAttivi";
+  | "lavoriAttivi"
+  | "numeroLavori";
 type SortOrder = "asc" | "desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,7 +103,7 @@ function todayISO(): string {
 }
 
 function emptyErrors(): FormErrors {
-  return { nome: "", cognome: "", telefono: "", email: "", duplicato: "" };
+  return { nome: "", cognome: "", telefono: "", citta: "", email: "", duplicato: "" };
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -173,6 +188,19 @@ const LAVORI_STORICO: LavoroStorico[] = [
   { id: "GSL-047", codiceLavoro: "GS-L047", clienteId: "CL-013", tipoLavoro: "Accorciare gamba",  stato: "Pronto",         dataConsegna: "2026-05-15", prezzo: 12 },
 ];
 
+function getSegmenti(clienteId: string, lavori: LavoroStorico[]) {
+  const jobs = lavori.filter((l) => l.clienteId === clienteId);
+  const completati = jobs.filter((l) => l.stato === "Consegnato").length;
+  const inCorso = jobs.filter(
+    (l) => l.stato === "In lavorazione" || l.stato === "In attesa cliente" || l.stato === "Pronto"
+  ).length;
+  const daFare = jobs.filter((l) => l.stato === "Da iniziare").length;
+  const annullati = jobs.filter((l) => l.stato === "Annullato").length;
+  const totale = jobs.length;
+  return { completati, inCorso, daFare, annullati, totale };
+}
+
+
 // ─── Style constants ──────────────────────────────────────────────────────────
 
 const FIELD_CLASS =
@@ -215,9 +243,9 @@ export default function ClientiPage() {
 
   // ── List state ────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterAttivi, setFilterAttivi] = useState("");
-  const [filterData, setFilterData] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("lavoriAttivi");
+  const [filterStato, setFilterStato] = useState("");
+  const [filterCitta, setFilterCitta] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("numeroLavori");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -233,21 +261,32 @@ export default function ClientiPage() {
   const [showBanner, setShowBanner] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
 
+  // ── Tooltip mouse-follow ──────────────────────────────────────────────────────
+  const [tooltipData, setTooltipData] = useState<{ cliente: Cliente; x: number; y: number } | null>(null);
+
   // ── New form ──────────────────────────────────────────────────────────────────
   const [newNome, setNewNome] = useState("");
   const [newCognome, setNewCognome] = useState("");
   const [newTelefono, setNewTelefono] = useState("");
+  const [newCitta, setNewCitta] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newNote, setNewNote] = useState("");
   const [newErrors, setNewErrors] = useState<FormErrors>(emptyErrors());
+  const [isLavoriOpen, setIsLavoriOpen] = useState(false);
+  const [newLavori, setNewLavori] = useState<LavoroForm[]>([]);
+  const lavoroCounter = useRef(0);
 
   // ── Edit form ─────────────────────────────────────────────────────────────────
   const [editNome, setEditNome] = useState("");
   const [editCognome, setEditCognome] = useState("");
   const [editTelefono, setEditTelefono] = useState("");
+  const [editCitta, setEditCitta] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editErrors, setEditErrors] = useState<FormErrors>(emptyErrors());
+
+  // ── Lavori aggiuntivi (persistono tra sessioni form) ──────────────────────────
+  const [lavoriAggiunti, setLavoriAggiunti] = useState<LavoroStorico[]>([]);
 
   // ── Effects ───────────────────────────────────────────────────────────────────
 
@@ -275,14 +314,15 @@ export default function ClientiPage() {
     return () => document.removeEventListener("keydown", onKey);
   }, [isDeleteOpen, isEditOpen, isNewOpen, isDetailOpen]);
 
+  // ── Merged lavori ─────────────────────────────────────────────────────────────
+  const tuttiLavori = useMemo(
+    () => [...LAVORI_STORICO, ...lavoriAggiunti],
+    [lavoriAggiunti]
+  );
+
   // ── Filtered + sorted list ────────────────────────────────────────────────────
 
   const filteredAndSorted = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const year = today.getFullYear();
-    const month = today.getMonth();
-
     let result = [...clienti];
 
     if (searchQuery) {
@@ -296,26 +336,23 @@ export default function ClientiPage() {
       );
     }
 
-    if (filterAttivi) {
-      if (filterAttivi === "nessuno") result = result.filter((c) => c.lavoriAttivi === 0);
-      else if (filterAttivi === "alcuni") result = result.filter((c) => c.lavoriAttivi > 0);
-      else if (filterAttivi === "molti") result = result.filter((c) => c.lavoriAttivi >= 3);
+    if (filterStato) {
+      if (filterStato === "in_corso") {
+        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).inCorso > 0);
+      } else if (filterStato === "da_iniziare") {
+        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).daFare > 0);
+      } else if (filterStato === "solo_completati") {
+        result = result.filter((c) => {
+          const { completati, totale } = getSegmenti(c.id, tuttiLavori);
+          return totale > 0 && completati === totale;
+        });
+      } else if (filterStato === "senza") {
+        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).totale === 0);
+      }
     }
 
-    if (filterData) {
-      if (filterData === "mese") {
-        const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
-        result = result.filter((c) => c.dataRegistrazione.startsWith(monthStr));
-      } else if (filterData === "tre_mesi") {
-        const cutoff = new Date(today);
-        cutoff.setMonth(cutoff.getMonth() - 3);
-        const cutoffStr = cutoff.toISOString().split("T")[0];
-        result = result.filter((c) => c.dataRegistrazione >= cutoffStr);
-      } else if (filterData === "anno") {
-        result = result.filter((c) => c.dataRegistrazione.startsWith(String(year)));
-      } else if (filterData === "vecchi") {
-        result = result.filter((c) => !c.dataRegistrazione.startsWith(String(year)));
-      }
+    if (filterCitta) {
+      result = result.filter((c) => c.citta === filterCitta);
     }
 
     result.sort((a, b) => {
@@ -331,13 +368,13 @@ export default function ClientiPage() {
     });
 
     return result;
-  }, [clienti, searchQuery, filterAttivi, filterData, sortBy, sortOrder]);
+  }, [clienti, searchQuery, filterStato, filterCitta, sortBy, sortOrder, tuttiLavori]);
 
   // ── Detail stats ──────────────────────────────────────────────────────────────
 
   const detailStats = useMemo(() => {
     if (!selectedCliente) return null;
-    const jobs = LAVORI_STORICO.filter((l) => l.clienteId === selectedCliente.id);
+    const jobs = tuttiLavori.filter((l) => l.clienteId === selectedCliente.id);
     const totaleSpeso = jobs
       .filter((l) => l.stato === "Consegnato")
       .reduce((s, l) => s + l.prezzo, 0);
@@ -348,7 +385,7 @@ export default function ClientiPage() {
       b.dataConsegna.localeCompare(a.dataConsegna)
     );
     return { totaleSpeso, daIncassare, sorted };
-  }, [selectedCliente]);
+  }, [selectedCliente, tuttiLavori]);
 
   // ── Utility ───────────────────────────────────────────────────────────────────
 
@@ -371,7 +408,9 @@ export default function ClientiPage() {
 
   function resetNewForm() {
     setNewNome(""); setNewCognome(""); setNewTelefono("");
-    setNewEmail(""); setNewNote(""); setNewErrors(emptyErrors());
+    setNewCitta(""); setNewEmail(""); setNewNote("");
+    setNewErrors(emptyErrors());
+    setIsLavoriOpen(false); setNewLavori([]);
   }
 
   function validateNew(): boolean {
@@ -388,8 +427,12 @@ export default function ClientiPage() {
       errs.telefono = "Inserisci un numero di telefono valido"; ok = false;
     }
 
+    if (!newCitta.trim()) { errs.citta = "Campo obbligatorio"; ok = false; }
+
     const mail = newEmail.trim();
-    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+    if (!mail) {
+      errs.email = "Campo obbligatorio"; ok = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
       errs.email = "Inserisci un'email valida"; ok = false;
     }
 
@@ -402,6 +445,24 @@ export default function ClientiPage() {
     }
 
     setNewErrors(errs);
+
+    let lavoriValidi = true;
+    const updatedLavori = newLavori.map((lav) => {
+      const lavErrs = {
+        tipoLavoro: !lav.tipoLavoro,
+        stato: !lav.stato,
+        dataConsegna: !lav.dataConsegna,
+        prezzo: !lav.prezzo || isNaN(parseFloat(lav.prezzo)),
+      };
+      if (lavErrs.tipoLavoro || lavErrs.stato || lavErrs.dataConsegna || lavErrs.prezzo) lavoriValidi = false;
+      return { ...lav, errors: lavErrs };
+    });
+    if (!lavoriValidi) {
+      setNewLavori(updatedLavori);
+      if (!isLavoriOpen) setIsLavoriOpen(true);
+      ok = false;
+    }
+
     return ok;
   }
 
@@ -411,19 +472,35 @@ export default function ClientiPage() {
       const n = parseInt(c.id.split("-")[1], 10);
       return n > max ? n : max;
     }, 0);
+    const nuovoId = `CL-${String(maxId + 1).padStart(3, "0")}`;
+    const attivi = newLavori.filter(
+      (l) => l.stato === "In lavorazione" || l.stato === "In attesa cliente" || l.stato === "Pronto"
+    ).length;
     const nuovoCliente: Cliente = {
-      id: `CL-${String(maxId + 1).padStart(3, "0")}`,
+      id: nuovoId,
       nome: newNome.trim(),
       cognome: newCognome.trim(),
       telefono: newTelefono.trim(),
-      citta: "",
+      citta: newCitta.trim(),
       email: newEmail.trim() || null,
       note: newNote.trim() || null,
       dataRegistrazione: todayISO(),
-      numeroLavori: 0,
-      lavoriAttivi: 0,
+      numeroLavori: newLavori.length,
+      lavoriAttivi: attivi,
     };
     setClienti((prev) => [...prev, nuovoCliente]);
+    if (newLavori.length > 0) {
+      const entries: LavoroStorico[] = newLavori.map((lav, i) => ({
+        id: `GSL-NEW-${Date.now()}-${i}`,
+        codiceLavoro: lav.codiceLavoro,
+        clienteId: nuovoId,
+        tipoLavoro: lav.tipoLavoro,
+        stato: lav.stato,
+        dataConsegna: lav.dataConsegna,
+        prezzo: parseFloat(lav.prezzo),
+      }));
+      setLavoriAggiunti((prev) => [...prev, ...entries]);
+    }
     setIsNewOpen(false);
     resetNewForm();
     showSuccess("Cliente aggiunto con successo");
@@ -433,7 +510,8 @@ export default function ClientiPage() {
 
   function resetEditForm() {
     setEditNome(""); setEditCognome(""); setEditTelefono("");
-    setEditEmail(""); setEditNote(""); setEditErrors(emptyErrors());
+    setEditCitta(""); setEditEmail(""); setEditNote("");
+    setEditErrors(emptyErrors());
   }
 
   function openEditFromDetail() {
@@ -441,6 +519,7 @@ export default function ClientiPage() {
     setEditNome(selectedCliente.nome);
     setEditCognome(selectedCliente.cognome);
     setEditTelefono(selectedCliente.telefono);
+    setEditCitta(selectedCliente.citta);
     setEditEmail(selectedCliente.email ?? "");
     setEditNote(selectedCliente.note ?? "");
     setEditErrors(emptyErrors());
@@ -462,8 +541,12 @@ export default function ClientiPage() {
       errs.telefono = "Inserisci un numero di telefono valido"; ok = false;
     }
 
+    if (!editCitta.trim()) { errs.citta = "Campo obbligatorio"; ok = false; }
+
     const mail = editEmail.trim();
-    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+    if (!mail) {
+      errs.email = "Campo obbligatorio"; ok = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
       errs.email = "Inserisci un'email valida"; ok = false;
     }
 
@@ -486,6 +569,7 @@ export default function ClientiPage() {
       nome: editNome.trim(),
       cognome: editCognome.trim(),
       telefono: editTelefono.trim(),
+      citta: editCitta.trim(),
       email: editEmail.trim() || null,
       note: editNote.trim() || null,
     };
@@ -494,6 +578,52 @@ export default function ClientiPage() {
     setIsEditOpen(false);
     resetEditForm();
     showSuccess("Cliente modificato con successo");
+  }
+
+  // ── Lavori pregressi handlers ─────────────────────────────────────────────────
+
+  function addLavoro() {
+    lavoroCounter.current++;
+    const allCodes = [
+      ...LAVORI_STORICO.map((l) => l.codiceLavoro),
+      ...newLavori.map((l) => l.codiceLavoro),
+    ];
+    let max = 0;
+    for (const code of allCodes) {
+      const match = code.match(/^GS-L?(\d+)$/);
+      if (match) max = Math.max(max, parseInt(match[1], 10));
+    }
+    const codiceLavoro = `GS-${String(max + 1).padStart(3, "0")}`;
+    setNewLavori((prev) => [
+      ...prev,
+      {
+        localId: lavoroCounter.current,
+        codiceLavoro,
+        tipoLavoro: "",
+        stato: "",
+        dataConsegna: "",
+        prezzo: "",
+        descrizione: "",
+        expanded: false,
+        errors: { tipoLavoro: false, stato: false, dataConsegna: false, prezzo: false },
+      },
+    ]);
+  }
+
+  function removeLavoro(localId: number) {
+    setNewLavori((prev) => prev.filter((l) => l.localId !== localId));
+  }
+
+  function updateLavoro(localId: number, field: string, value: string) {
+    setNewLavori((prev) =>
+      prev.map((l) => (l.localId === localId ? { ...l, [field]: value } : l))
+    );
+  }
+
+  function toggleLavoroExpanded(localId: number) {
+    setNewLavori((prev) =>
+      prev.map((l) => (l.localId === localId ? { ...l, expanded: !l.expanded } : l))
+    );
   }
 
   // ── Delete handler ────────────────────────────────────────────────────────────
@@ -545,31 +675,31 @@ export default function ClientiPage() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">Lavori attivi</label>
+              <label className="text-xs font-medium text-slate-500">Stato lavori</label>
               <select
-                value={filterAttivi}
-                onChange={(e) => setFilterAttivi(e.target.value)}
+                value={filterStato}
+                onChange={(e) => setFilterStato(e.target.value)}
                 className={SELECT_CLASS}
               >
                 <option value="">Tutti</option>
-                <option value="nessuno">Senza lavori attivi</option>
-                <option value="alcuni">Con lavori attivi</option>
-                <option value="molti">Molto attivi (3+)</option>
+                <option value="in_corso">Con lavori in corso</option>
+                <option value="da_iniziare">Con lavori da iniziare</option>
+                <option value="solo_completati">Solo completati</option>
+                <option value="senza">Senza lavori</option>
               </select>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">Data registrazione</label>
+              <label className="text-xs font-medium text-slate-500">Città</label>
               <select
-                value={filterData}
-                onChange={(e) => setFilterData(e.target.value)}
+                value={filterCitta}
+                onChange={(e) => setFilterCitta(e.target.value)}
                 className={SELECT_CLASS}
               >
                 <option value="">Tutte</option>
-                <option value="mese">Questo mese</option>
-                <option value="tre_mesi">Ultimi 3 mesi</option>
-                <option value="anno">Quest&apos;anno</option>
-                <option value="vecchi">Più vecchi</option>
+                {Array.from(new Set(clienti.map((c) => c.citta))).sort().map((citta) => (
+                  <option key={citta} value={citta}>{citta}</option>
+                ))}
               </select>
             </div>
 
@@ -600,12 +730,8 @@ export default function ClientiPage() {
                 <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("citta")}>
                   Città <SortIndicator active={sortBy === "citta"} order={sortOrder} />
                 </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none whitespace-nowrap"
-                  title="Totali / In corso"
-                  onClick={() => handleSort("lavoriAttivi")}
-                >
-                  Lavori <SortIndicator active={sortBy === "lavoriAttivi"} order={sortOrder} />
+                <TableHead className="cursor-pointer select-none whitespace-nowrap min-w-[200px]" onClick={() => handleSort("numeroLavori")}>
+                  Lavori <SortIndicator active={sortBy === "numeroLavori"} order={sortOrder} />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -620,15 +746,37 @@ export default function ClientiPage() {
                   <TableCell className="text-slate-700">{cliente.cognome}</TableCell>
                   <TableCell className="font-mono text-[12px] text-slate-600">{cliente.telefono}</TableCell>
                   <TableCell className="text-slate-700">{cliente.citta}</TableCell>
-                  <TableCell>
-                    {cliente.lavoriAttivi > 0 ? (
-                      <span className="text-slate-700">
-                        {cliente.numeroLavori}{" "}
-                        <span className="font-semibold text-amber-700">/ {cliente.lavoriAttivi}</span>
-                      </span>
-                    ) : (
-                      <span className="text-slate-500">{cliente.numeroLavori} / 0</span>
-                    )}
+                  <TableCell className="min-w-[200px]">
+                    {(() => {
+                      const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente.id, tuttiLavori);
+                      if (totale === 0) return <span className="text-slate-400">—</span>;
+                      return (
+                        <div className="flex items-center gap-3">
+                          <span className="shrink-0 text-sm text-slate-700">
+                            {totale}
+                          </span>
+                          <div
+                            className="flex flex-1 items-center gap-1 pr-4"
+                            onMouseEnter={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
+                            onMouseMove={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
+                            onMouseLeave={() => setTooltipData(null)}
+                          >
+                            {completati > 0 && (
+                              <div className="h-2 rounded-full bg-green-400" style={{ width: `${(completati / totale) * 100}%`, minWidth: "8px" }} />
+                            )}
+                            {inCorso > 0 && (
+                              <div className="h-2 rounded-full bg-amber-400" style={{ width: `${(inCorso / totale) * 100}%`, minWidth: "8px" }} />
+                            )}
+                            {daFare > 0 && (
+                              <div className="h-2 rounded-full bg-stone-300" style={{ width: `${(daFare / totale) * 100}%`, minWidth: "8px" }} />
+                            )}
+                            {annullati > 0 && (
+                              <div className="h-2 rounded-full bg-red-400" style={{ width: `${(annullati / totale) * 100}%`, minWidth: "8px" }} />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                 </TableRow>
               ))}
@@ -660,6 +808,42 @@ export default function ClientiPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ══ Tooltip lavori (segue il mouse) ═════════════════════════════════════ */}
+      {tooltipData && (() => {
+        const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente.id, tuttiLavori);
+        return (
+          <div
+            style={{ position: "fixed", left: tooltipData.x + 12, top: tooltipData.y + 12, pointerEvents: "none", zIndex: 50 }}
+            className="whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-xs text-white shadow-lg"
+          >
+            {completati > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-400" />
+                Consegnati: {completati}
+              </div>
+            )}
+            {inCorso > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                In corso: {inCorso}
+              </div>
+            )}
+            {daFare > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-stone-300" />
+                Da iniziare: {daFare}
+              </div>
+            )}
+            {annullati > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-400" />
+                Annullati: {annullati}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ══ Banner successo ══════════════════════════════════════════════════════ */}
       {isMounted && showBanner && createPortal(
@@ -905,7 +1089,21 @@ export default function ClientiPage() {
 
               <div>
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Email
+                  Città <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newCitta}
+                  onChange={(e) => setNewCitta(e.target.value)}
+                  placeholder="Es. Milano"
+                  className={newErrors.citta ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {newErrors.citta && <p className="mt-1 text-[12px] text-red-500">{newErrors.citta}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -929,6 +1127,110 @@ export default function ClientiPage() {
                   className={TEXTAREA_CLASS}
                 />
               </div>
+            </div>
+
+            {/* Sezione lavori pregressi */}
+            <div className="border-t border-stone-200 px-6">
+              <div
+                className="flex cursor-pointer flex-col py-3 hover:bg-stone-50 -mx-6 px-6"
+                onClick={() => setIsLavoriOpen((o) => !o)}
+              >
+                <div className="flex items-center gap-2">
+                  {isLavoriOpen
+                    ? <ChevronDown className="h-4 w-4 text-slate-500" />
+                    : <ChevronRight className="h-4 w-4 text-slate-500" />
+                  }
+                  <span className="text-[13px] font-medium text-slate-700">Aggiungi lavori pregressi</span>
+                </div>
+                <p className="ml-6 mt-0.5 text-[12px] text-slate-500">
+                  Se il cliente ha già fatto lavori in passato, aggiungili qui (opzionale)
+                </p>
+              </div>
+              {isLavoriOpen && (
+                <div className="space-y-2 pb-4">
+                  {newLavori.map((lav) => (
+                    <div key={lav.localId} className="rounded-lg border border-stone-200 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="w-16 shrink-0 font-mono text-xs text-slate-500">{lav.codiceLavoro}</span>
+                        <select
+                          value={lav.tipoLavoro}
+                          onChange={(e) => updateLavoro(lav.localId, "tipoLavoro", e.target.value)}
+                          className={`flex-1 rounded border ${lav.errors.tipoLavoro ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
+                        >
+                          <option value="">Tipo lavoro</option>
+                          <option>Orlo pantalone</option>
+                          <option>Stringere vita</option>
+                          <option>Accorciare gamba</option>
+                          <option>Allargare pantalone</option>
+                          <option>Sostituzione zip</option>
+                          <option>Riparazione strappo</option>
+                          <option>Pantalone su misura</option>
+                          <option>Altro</option>
+                        </select>
+                        <select
+                          value={lav.stato}
+                          onChange={(e) => updateLavoro(lav.localId, "stato", e.target.value)}
+                          className={`w-36 rounded border ${lav.errors.stato ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
+                        >
+                          <option value="">Stato</option>
+                          <option>Da iniziare</option>
+                          <option>In lavorazione</option>
+                          <option>In attesa cliente</option>
+                          <option>Pronto</option>
+                          <option>Consegnato</option>
+                          <option>Annullato</option>
+                        </select>
+                        <input
+                          type="date"
+                          value={lav.dataConsegna}
+                          onChange={(e) => updateLavoro(lav.localId, "dataConsegna", e.target.value)}
+                          className={`w-36 rounded border ${lav.errors.dataConsegna ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="€"
+                          value={lav.prezzo}
+                          onChange={(e) => updateLavoro(lav.localId, "prezzo", e.target.value)}
+                          className={`w-20 rounded border ${lav.errors.prezzo ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleLavoroExpanded(lav.localId)}
+                          className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-stone-100 hover:text-slate-600"
+                        >
+                          {lav.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeLavoro(lav.localId); }}
+                          className="flex h-7 w-7 items-center justify-center rounded text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {lav.expanded && (
+                        <div className="mt-2">
+                          <textarea
+                            value={lav.descrizione}
+                            onChange={(e) => updateLavoro(lav.localId, "descrizione", e.target.value)}
+                            placeholder="Es. orlo a macchina su pantalone blu elegante"
+                            rows={2}
+                            className="w-full resize-none rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addLavoro}
+                    className="w-full rounded-lg border border-amber-600 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50"
+                  >
+                    + Aggiungi lavoro
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -1028,7 +1330,21 @@ export default function ClientiPage() {
 
               <div>
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Email
+                  Città <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editCitta}
+                  onChange={(e) => setEditCitta(e.target.value)}
+                  placeholder="Es. Milano"
+                  className={editErrors.citta ? FIELD_ERROR_CLASS : FIELD_CLASS}
+                />
+                {editErrors.citta && <p className="mt-1 text-[12px] text-red-500">{editErrors.citta}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
