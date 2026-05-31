@@ -1,12 +1,20 @@
 # CLAUDE.md — Istruzioni operative per Claude Code
 
-Questo file definisce le regole di lavoro, i pattern UI consolidati e il flusso operativo
-per il progetto **Gestionale Sartoria** (repository: `pants-manager`).
-Viene letto automaticamente da Claude Code ad ogni sessione.
+Questo file viene letto automaticamente da Claude Code ad ogni sessione.
+Definisce regole, pattern UI, flusso di lavoro e stato del progetto.
 
 ---
 
-## Stack tecnico
+## Progetto
+
+**Nome:** Gestionale Sartoria
+**Repository:** `pants-manager`
+**Tipo:** App desktop nativa (Tauri 2.0 + Next.js 15 static export)
+**Database:** SQLite locale via plugin Tauri SQL — non ancora collegato
+
+---
+
+## Stack
 
 | Tecnologia | Ruolo |
 |---|---|
@@ -15,7 +23,7 @@ Viene letto automaticamente da Claude Code ad ogni sessione.
 | Tailwind CSS | Stile |
 | shadcn/ui | Componenti UI |
 | Tauri 2.0 | App desktop nativa |
-| SQLite (plugin Tauri SQL) | Database locale — non ancora collegato |
+| SQLite (plugin Tauri SQL) | Database locale — da collegare |
 
 ---
 
@@ -23,39 +31,72 @@ Viene letto automaticamente da Claude Code ad ogni sessione.
 
 | Pagina | Stato |
 |---|---|
-| Clienti | ✅ Completata con mock data |
-| Lavori | ✅ Completata con mock data — mancano foto prima/dopo |
-| Dashboard | 🔄 Da ridisegnare |
-| Pagamenti | ⏳ Da progettare e implementare |
-| Statistiche | ⏳ Da progettare e implementare |
-| Impostazioni | ⏳ Da progettare e implementare |
-| Magazzino | ⏳ Da progettare e implementare (fase futura) |
+| Pagina Clienti | ✅ Completata con mock data |
+| Pagina Lavori | ✅ Completata con mock data |
+| Dashboard | 🔄 In programma — da ridisegnare |
+| Pagina Pagamenti | ⏳ Da fare |
+| Pagina Statistiche | ⏳ Da fare |
+| Pagina Impostazioni | ⏳ Da fare |
+| Pagina Magazzino | ⏳ Da fare |
 
-**Tutto il progetto usa attualmente mock data statici — nessun database collegato.**
+**Tutto il progetto usa mock data statici — nessun database collegato.**
 
 ---
 
 ## Regole fondamentali
 
 1. **Prompt piccoli e mirati** — un obiettivo per volta, nessuna modifica massiva
-2. **`npm run build` obbligatorio** dopo ogni modifica prima del commit
+2. **`npm run build` obbligatorio** dopo ogni modifica, prima del commit
 3. **Commit solo con build pulita** e UI visivamente corretta
 4. **Sempre su branch feature** — mai toccare `main` direttamente
-5. **Nessuna modifica a database, schema SQLite o Tauri backend** durante la fase UI
+5. **Nessuna modifica a database, SQLite o Tauri backend** durante la fase UI
 6. **Tutti i testi UI in italiano** — zero stringhe in inglese nelle pagine visibili
 7. **Tono artigianale e caldo** — no linguaggio aziendale, no B2B
-8. **Non reinventare i pattern UI** — usare sempre quelli consolidati sotto
+8. **Non reinventare i pattern UI** — usare sempre i pattern consolidati sotto
 
 ---
 
 ## Struttura obbligatoria di ogni prompt
 
 ```
-1. Obiettivo         — cosa deve fare questa modifica
-2. File da toccare   — lista esplicita dei file coinvolti
+1. Obiettivo           — cosa deve fare questa modifica
+2. File da toccare     — lista esplicita dei file coinvolti
 3. File da NON toccare — lista esplicita di ciò che non va cambiato
-4. Mock data         — dati di esempio se la modifica ne richiede
-5. Verifica finale   — npm run build
+4. Mock data           — dati di esempio se necessari
+5. Verifica finale     — npm run build
+```
+
+---
+
+## Aggiornamento automatico documentazione — OBBLIGATORIO
+
+Ad ogni modifica completata e verificata, aggiornare **entrambi** i file prima del commit:
+
+### Cosa aggiornare in CLAUDE.md
+- **Tabella "Stato pagine"** — stato della pagina coinvolta
+- **Tabella "Roadmap"** — stato della fase (✅ / 🔄 / ⏳)
+- **Pattern UI consolidati** — aggiungere se la modifica introduce un nuovo pattern
+
+### Cosa aggiornare in README.md
+- **Tabella "Stato attuale"** — stato della pagina coinvolta
+- **Sezione della pagina modificata** — aggiornare funzionalità implementate
+- **Tabella "Roadmap"** — stato della fase
+- **Modello dati** — se vengono aggiunti campi o tabelle
+
+### Regola del commit
+```bash
+git add <file modificati> README.md CLAUDE.md
+git commit -m "tipo(scope): descrizione"
+git push
+```
+
+### Formato messaggi di commit
+```
+feat(lavori): aggiunta galleria foto prima/dopo nel dettaglio
+feat(pagamenti): implementazione pagina pagamenti con mock data
+feat(dashboard): ridisegno layout con nuovi widget KPI
+fix(modal): corretto scroll lock su apertura modale annidato
+docs: aggiornamento roadmap e stato pagine
 ```
 
 ---
@@ -88,7 +129,7 @@ import ReactDOM from 'react-dom'
 {isOpen && ReactDOM.createPortal(
   <div className="fixed inset-0 z-50 flex items-center justify-center">
     <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-    <div className="relative bg-white rounded-lg shadow-xl ...">
+    <div className="relative bg-white rounded-lg shadow-xl p-6">
       {/* contenuto */}
     </div>
   </div>,
@@ -98,7 +139,7 @@ import ReactDOM from 'react-dom'
 
 ### Scroll lock
 ```tsx
-// Bloccare lo scroll del body su TUTTI gli stati modal aperti
+// Chiave su TUTTI gli stati modal aperti simultaneamente
 useEffect(() => {
   const anyOpen = isDetailOpen || isNewOpen || isEditOpen
   document.body.style.overflow = anyOpen ? 'hidden' : ''
@@ -117,12 +158,9 @@ useEffect(() => {
 }, [onClose])
 ```
 
-### Banner di conferma (auto-dismiss)
+### Banner di conferma (auto-dismiss 3s)
 ```tsx
 const [showBanner, setShowBanner] = useState(false)
-
-// Dopo salvataggio:
-setShowBanner(true)
 
 useEffect(() => {
   if (!showBanner) return
@@ -130,7 +168,6 @@ useEffect(() => {
   return () => clearTimeout(t)
 }, [showBanner])
 
-// UI:
 {showBanner && (
   <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
     Salvato con successo
@@ -141,7 +178,7 @@ useEffect(() => {
 ### Sub-modal di conferma (azioni distruttive)
 ```tsx
 // Obbligatorio per Elimina e qualsiasi azione irreversibile
-// È un secondo modal sopra il modal principale — stesso pattern createPortal
+// Stesso pattern createPortal — modal sopra modal
 const [showConfirm, setShowConfirm] = useState(false)
 ```
 
@@ -161,20 +198,19 @@ const handleSort = (col: string) => {
 
 ### Filter bar
 ```tsx
-// Ordine fisso da sinistra: [Search] [Dropdown1] [Dropdown2] [Dropdown3]
-// La search è real-time su nome, codice, tipo
+// Ordine fisso: [Search] [Dropdown 1] [Dropdown 2] [Dropdown 3]
+// Search: real-time su nome, codice, tipo — combinabile con i dropdown
 // Tutti i filtri si combinano tra loro (AND logic)
-// Sotto la tabella: "Stai visualizzando X di Y lavori" + "Carica altri"
+// Sotto la tabella: "Stai visualizzando X di Y risultati" + bottone "Carica altri"
 ```
 
 ### Validazione form inline
 ```tsx
-// Errori mostrati sotto il campo, in rosso, senza alert esterni
 const [errors, setErrors] = useState<Record<string, string>>({})
 
-// Esempio:
-{errors.cliente && (
-  <p className="text-sm text-red-600 mt-1">{errors.cliente}</p>
+// Errori mostrati sotto il campo, in rosso, senza alert esterni
+{errors.campo && (
+  <p className="text-sm text-red-600 mt-1">{errors.campo}</p>
 )}
 ```
 
@@ -187,13 +223,13 @@ const [errors, setErrors] = useState<Record<string, string>>({})
 | `main` | Versione stabile — solo merge da feature branch |
 | `feature/dashboard` | Ridisegno dashboard |
 | `feature/clienti` | Pagina clienti |
-| `feature/lavori` | Pagina lavori + foto prima/dopo |
+| `feature/lavori` | Pagina lavori |
 | `feature/pagamenti` | Pagina pagamenti |
 | `feature/statistiche` | Pagina statistiche |
 | `feature/impostazioni` | Pagina impostazioni |
-| `feature/magazzino` | Pagina magazzino (fase futura) |
-| `feature/crud` | CRUD reali con SQLite |
+| `feature/magazzino` | Pagina magazzino |
 | `feature/database` | Schema e setup database SQLite |
+| `feature/crud` | CRUD reali con SQLite |
 | `feature/auth` | Autenticazione e ruoli |
 | `Total-CSS` | Modifiche CSS globali |
 | `docs/setup-progetto` | Documentazione |
@@ -214,14 +250,13 @@ npx tauri build    # Genera installer .dmg (solo per distribuzione)
 ## Flusso Git
 
 ```bash
-# Inizio sessione — verificare sempre il branch
-git branch
-git status
+# Inizio sessione
+git branch && git status
 
 # Fine sessione
 npm run build
-git add .
-git commit -m "descrizione chiara della modifica"
+git add <file> README.md CLAUDE.md
+git commit -m "tipo(scope): descrizione"
 git push
 
 # Rollback pre-commit
@@ -230,57 +265,18 @@ git restore .
 
 ---
 
-## Aggiornamento automatico documentazione — OBBLIGATORIO
+## Roadmap
 
-Ad ogni modifica completata e verificata, Claude Code deve aggiornare
-**entrambi** i file di documentazione prima del commit finale.
-
-### Cosa aggiornare in CLAUDE.md
-- **Tabella "Stato pagine"** — aggiorna lo stato della pagina coinvolta
-- **Tabella "Roadmap fasi"** — aggiorna lo stato della fase (✅ / 🔄 / ⏳) e il branch
-- **Pattern UI consolidati** — aggiungi il pattern se la modifica ne introduce uno nuovo
-
-### Cosa aggiornare in README.md
-- **Sezione "Stato attuale del progetto"** — aggiorna i bullet ✅ / 🔄 / ⏳
-- **Tabella "Pagine principali"** — aggiorna lo stato della pagina coinvolta
-- **Sezione "Roadmap"** — aggiorna lo stato della fase completata o avviata
-- **Modello dati** — aggiorna se vengono aggiunti o modificati campi o tabelle
-
-### Regola del commit
-Il commit di ogni modifica deve includere **sempre** tutti e tre:
-```
-git add <file modificati> README.md CLAUDE.md
-git commit -m "tipo(scope): descrizione modifica"
-git push
-```
-
-### Formato messaggi di commit
-```
-feat(lavori): aggiunta sezione foto prima/dopo nel dettaglio lavoro
-feat(dashboard): ridisegno layout con nuovi widget KPI
-feat(pagamenti): implementazione pagina pagamenti con mock data
-fix(modal): corretto scroll lock su apertura modale annidato
-docs: aggiornamento roadmap e stato pagine
-```
-
----
-
-## Roadmap fasi
-
-| # | Fase | Stato | Branch |
+| Ordine | Fase | Stato | Branch |
 |---|---|---|---|
-| 1 | UI statica | ✅ Completata | main |
-| 2 | Pulizia dashboard | ✅ Completata | feature/dashboard |
-| 3 | Pagina Clienti | ✅ Completata | feature/clienti |
-| 4 | Pagina Lavori | ✅ Completata | feature/lavori |
-| 5 | Conversione a Tauri | ✅ Completata | main |
-| 6 | Foto prima/dopo (Lavori) | 🔄 In programma | feature/lavori |
-| 7 | Ridisegno Dashboard | 🔄 In programma | feature/dashboard |
-| 8 | Pagina Pagamenti | ⏳ Da fare | feature/pagamenti |
-| 9 | Pagina Statistiche | ⏳ Da fare | feature/statistiche |
-| 10 | Pagina Impostazioni | ⏳ Da fare | feature/impostazioni |
-| 11 | Database SQLite | ⏳ Da fare | feature/database |
-| 12 | CRUD reali | ⏳ Da fare | feature/crud |
-| 13 | Dashboard dinamica | ⏳ Da fare | feature/dashboard |
-| 14 | Autenticazione | ⏳ Da fare | feature/auth |
-| 15 | Pagina Magazzino | ⏳ Da fare | feature/magazzino |
+| 1 | Dashboard | 🔄 In programma | feature/dashboard |
+| 2 | Pagina Clienti | ✅ Completata | feature/clienti |
+| 3 | Pagina Lavori | ✅ Completata | feature/lavori |
+| 4 | Pagina Pagamenti | ⏳ Da fare | feature/pagamenti |
+| 5 | Pagina Statistiche | ⏳ Da fare | feature/statistiche |
+| 6 | Pagina Impostazioni | ⏳ Da fare | feature/impostazioni |
+| 7 | Pagina Magazzino | ⏳ Da fare | feature/magazzino |
+| 8 | Database SQLite | ⏳ Da fare | feature/database |
+| 9 | CRUD reali | ⏳ Da fare | feature/crud |
+| 10 | Dashboard dinamica | ⏳ Da fare | feature/dashboard |
+| 11 | Autenticazione | ⏳ Da fare | feature/auth |
