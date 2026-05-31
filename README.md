@@ -62,7 +62,7 @@ Database SQLite (file locale)
 
 - ✅ Pagina Clienti — UI completata con mock data
 - ✅ Pagina Lavori — UI completata con mock data
-- ✅ Foto Prima/Dopo nel modal dettaglio lavoro (mock UI — upload reale in Fase 11)
+- ✅ Foto Prima/Dopo nel modal dettaglio lavoro (file picker reale, base64 in memoria)
 - ✅ App desktop nativa funzionante su macOS
 - ✅ Installer `.dmg` generabile con `npx tauri build`
 - ✅ Next.js configurato in modalità static export
@@ -307,7 +307,7 @@ Lista con filtri per stato, dettaglio lavoro, form nuovo lavoro e modifica.
 Integrazione Tauri 2.0, Next.js in static export, app desktop nativa, installer `.dmg`.
 
 ### ✅ Fase 6 — Foto prima/dopo (Pagina Lavori)
-Sezione foto Prima/Dopo nel modal dettaglio lavoro (mock UI — upload reale in Fase 11).
+Sezione foto Prima/Dopo nel modal dettaglio lavoro — upload reale da file picker, lettura base64 in memoria (persistenza su disco in Fase 11).
 
 ### 🔄 Fase 7 — Ridisegno Dashboard
 Nuovo layout dashboard: da definire in sessione Q&A dedicata prima di qualsiasi implementazione.

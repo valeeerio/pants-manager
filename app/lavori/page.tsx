@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   ClipboardList,
@@ -393,8 +393,10 @@ export default function JobsPage() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Foto Prima / Dopo (mock UI — per sessione)
+  // Foto Prima / Dopo — per sessione, lettura base64 in memoria
   const [jobPhotos, setJobPhotos] = useState<Record<number, JobPhotos>>({});
+  const inputPrimaRef = useRef<HTMLInputElement>(null);
+  const inputDopoRef = useRef<HTMLInputElement>(null);
 
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -701,19 +703,32 @@ export default function JobsPage() {
     setSelectedLavoro(null);
   }
 
-  function handleAddPhoto(jobId: number, slot: "prima" | "dopo") {
-    const url =
-      slot === "prima"
-        ? "https://placehold.co/400x300/e2e8f0/94a3b8?text=Prima"
-        : "https://placehold.co/400x300/fef3c7/d97706?text=Dopo";
-    setJobPhotos((prev) => ({
-      ...prev,
-      [jobId]: {
-        prima: prev[jobId]?.prima ?? null,
-        dopo: prev[jobId]?.dopo ?? null,
-        [slot]: url,
-      },
-    }));
+  function handleFileSelected(
+    e: React.ChangeEvent<HTMLInputElement>,
+    jobId: number,
+    slot: "prima" | "dopo"
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setJobPhotos((prev) => ({
+        ...prev,
+        [jobId]: {
+          prima: prev[jobId]?.prima ?? null,
+          dopo: prev[jobId]?.dopo ?? null,
+          [slot]: base64,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function handleOpenFilePicker(slot: "prima" | "dopo") {
+    if (slot === "prima") inputPrimaRef.current?.click();
+    else inputDopoRef.current?.click();
   }
 
   function handleRemovePhoto(jobId: number, slot: "prima" | "dopo") {
@@ -1098,6 +1113,22 @@ export default function JobsPage() {
               </div>
             </div>
 
+            {/* Input file nascosti per il picker di sistema */}
+            <input
+              ref={inputPrimaRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelected(e, selectedLavoro.id, "prima")}
+            />
+            <input
+              ref={inputDopoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelected(e, selectedLavoro.id, "dopo")}
+            />
+
             {/* Sezione foto Prima / Dopo */}
             <div className="border-t border-stone-200 px-6 pt-5 pb-6">
               <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">
@@ -1121,7 +1152,7 @@ export default function JobsPage() {
                         <div
                           className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 transition-colors hover:border-stone-400 hover:bg-stone-100"
                           style={{ aspectRatio: "4/3" }}
-                          onClick={() => handleAddPhoto(selectedLavoro.id, slot)}
+                          onClick={() => handleOpenFilePicker(slot)}
                         >
                           <Camera size={24} className="text-stone-400" />
                           <span className="text-sm text-slate-400">Nessuna foto</span>
@@ -1131,7 +1162,7 @@ export default function JobsPage() {
                         <div
                           className="group relative w-full cursor-pointer overflow-hidden rounded-lg"
                           style={{ aspectRatio: "4/3" }}
-                          onClick={() => handleAddPhoto(selectedLavoro.id, slot)}
+                          onClick={() => handleOpenFilePicker(slot)}
                         >
                           <img
                             src={fotoUrl}
