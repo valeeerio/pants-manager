@@ -62,12 +62,12 @@ Database SQLite (file locale)
 
 - ✅ Pagina Clienti — UI completata con mock data
 - ✅ Pagina Lavori — UI completata con mock data
+- ✅ Foto Prima/Dopo nel modal dettaglio lavoro (mock UI — upload reale in Fase 11)
 - ✅ App desktop nativa funzionante su macOS
 - ✅ Installer `.dmg` generabile con `npx tauri build`
 - ✅ Next.js configurato in modalità static export
 - ✅ Tauri 2.0 integrato e configurato
 - 🔄 Dashboard — da ridisegnare
-- 🔄 Pagina Lavori — da aggiungere foto prima/dopo per ogni lavoro
 - ⏳ Pagina Pagamenti — da progettare e implementare
 - ⏳ Pagina Statistiche — da progettare e implementare
 - ⏳ Pagina Impostazioni — da progettare e implementare
@@ -165,7 +165,7 @@ Struttura di ogni prompt per Claude Code:
 |---|---|
 | Dashboard | 🔄 Da ridisegnare |
 | Clienti | ✅ UI completata con mock data |
-| Lavori | ✅ UI completata — da aggiungere foto prima/dopo |
+| Lavori | ✅ UI completata con sezione foto Prima/Dopo |
 | Pagamenti | ⏳ Da progettare e implementare |
 | Statistiche | ⏳ Da progettare e implementare |
 | Impostazioni | ⏳ Da progettare e implementare |
@@ -306,8 +306,8 @@ Lista con filtri per stato, dettaglio lavoro, form nuovo lavoro e modifica.
 ### ✅ Fase 5 — Conversione a Tauri
 Integrazione Tauri 2.0, Next.js in static export, app desktop nativa, installer `.dmg`.
 
-### 🔄 Fase 6 — Foto prima/dopo (Pagina Lavori)
-Sezione foto nel dettaglio lavoro: galleria con due fasi (prima/dopo). Mock con immagini placeholder.
+### ✅ Fase 6 — Foto prima/dopo (Pagina Lavori)
+Sezione foto Prima/Dopo nel modal dettaglio lavoro (mock UI — upload reale in Fase 11).
 
 ### 🔄 Fase 7 — Ridisegno Dashboard
 Nuovo layout dashboard: da definire in sessione Q&A dedicata prima di qualsiasi implementazione.
@@ -340,7 +340,7 @@ Gestione materiale: lista, aggiunta, modifica, soglie minime. UI + CRUD.
 
 ## Funzionalità future
 
-- Foto capi prima/dopo *(in lavorazione — Fase 6)*
+- Foto capi prima/dopo *(completata Fase 6 — upload reale in Fase 11)*
 - Gestione magazzino materiale *(in roadmap — Fase 15)*
 - Gestione misure cliente (vita, fianchi, lunghezza gamba, ecc.)
 - Ricevuta PDF

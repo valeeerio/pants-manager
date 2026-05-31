@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Pencil,
   CheckCircle,
+  Camera,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type JobPhotos = {
+  prima: string | null;
+  dopo: string | null;
+};
+
 type Job = {
   id: number;
   code: string;
@@ -41,6 +47,7 @@ type Job = {
   finalPrice: number | null;
   description: string;
   notes: string | null;
+  photos?: JobPhotos;
 };
 
 const allJobs: Job[] = [
@@ -386,6 +393,9 @@ export default function JobsPage() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Foto Prima / Dopo (mock UI — per sessione)
+  const [jobPhotos, setJobPhotos] = useState<Record<number, JobPhotos>>({});
+
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState("");
@@ -689,6 +699,32 @@ export default function JobsPage() {
     setShowDeleteConfirm(false);
     setIsModalOpen(false);
     setSelectedLavoro(null);
+  }
+
+  function handleAddPhoto(jobId: number, slot: "prima" | "dopo") {
+    const url =
+      slot === "prima"
+        ? "https://placehold.co/400x300/e2e8f0/94a3b8?text=Prima"
+        : "https://placehold.co/400x300/fef3c7/d97706?text=Dopo";
+    setJobPhotos((prev) => ({
+      ...prev,
+      [jobId]: {
+        prima: prev[jobId]?.prima ?? null,
+        dopo: prev[jobId]?.dopo ?? null,
+        [slot]: url,
+      },
+    }));
+  }
+
+  function handleRemovePhoto(jobId: number, slot: "prima" | "dopo") {
+    setJobPhotos((prev) => ({
+      ...prev,
+      [jobId]: {
+        prima: prev[jobId]?.prima ?? null,
+        dopo: prev[jobId]?.dopo ?? null,
+        [slot]: null,
+      },
+    }));
   }
 
   const visibleJobs = filteredAndSorted.slice(0, showMore);
@@ -1059,6 +1095,64 @@ export default function JobsPage() {
                     )}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Sezione foto Prima / Dopo */}
+            <div className="border-t border-stone-200 px-6 pt-5 pb-6">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">
+                Foto lavoro
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {(["prima", "dopo"] as const).map((slot) => {
+                  const currentPhotos = jobPhotos[selectedLavoro.id];
+                  const fotoUrl = slot === "prima"
+                    ? (currentPhotos?.prima ?? null)
+                    : (currentPhotos?.dopo ?? null);
+                  const labelTitolo = slot === "prima" ? "Prima" : "Dopo";
+                  const labelSub = slot === "prima" ? "Stato all'arrivo" : "Risultato finale";
+                  return (
+                    <div key={slot} className="flex flex-col items-center">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        {labelTitolo}
+                      </p>
+                      <p className="mb-3 text-xs text-slate-400">{labelSub}</p>
+                      {fotoUrl === null ? (
+                        <div
+                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 transition-colors hover:border-stone-400 hover:bg-stone-100"
+                          style={{ aspectRatio: "4/3" }}
+                          onClick={() => handleAddPhoto(selectedLavoro.id, slot)}
+                        >
+                          <Camera size={24} className="text-stone-400" />
+                          <span className="text-sm text-slate-400">Nessuna foto</span>
+                          <span className="mt-1 text-xs font-medium text-amber-600">+ Aggiungi foto</span>
+                        </div>
+                      ) : (
+                        <div
+                          className="group relative w-full cursor-pointer overflow-hidden rounded-lg"
+                          style={{ aspectRatio: "4/3" }}
+                          onClick={() => handleAddPhoto(selectedLavoro.id, slot)}
+                        >
+                          <img
+                            src={fotoUrl}
+                            alt={labelTitolo}
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Pencil size={20} className="text-white" />
+                            <span className="text-xs font-medium text-white">Cambia foto</span>
+                          </div>
+                          <button
+                            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                            onClick={(e) => { e.stopPropagation(); handleRemovePhoto(selectedLavoro.id, slot); }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
