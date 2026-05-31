@@ -60,14 +60,20 @@ Database SQLite (file locale)
 
 ## Stato attuale del progetto
 
-- ✅ UI completata per Dashboard, Clienti, Lavori (con dati mock)
+- ✅ Pagina Clienti — UI completata con mock data
+- ✅ Pagina Lavori — UI completata con mock data
 - ✅ App desktop nativa funzionante su macOS
 - ✅ Installer `.dmg` generabile con `npx tauri build`
 - ✅ Next.js configurato in modalità static export
 - ✅ Tauri 2.0 integrato e configurato
-- ⏳ Database SQLite — da collegare (Fase 4)
-- ⏳ CRUD reali — da implementare (Fase 5)
-- ⏳ Autenticazione — da implementare (Fase 7)
+- 🔄 Dashboard — da ridisegnare
+- 🔄 Pagina Lavori — da aggiungere foto prima/dopo per ogni lavoro
+- ⏳ Pagina Pagamenti — da progettare e implementare
+- ⏳ Pagina Statistiche — da progettare e implementare
+- ⏳ Pagina Impostazioni — da progettare e implementare
+- ⏳ Pagina Magazzino — da progettare e implementare (fase futura)
+- ⏳ Database SQLite — da collegare
+- ⏳ CRUD reali — da implementare
 
 ---
 
@@ -76,9 +82,7 @@ Database SQLite (file locale)
 ```bash
 # Avvia il dev server Next.js + finestra Tauri
 npx tauri dev
-```
 
-```bash
 # Avvia solo Next.js nel browser (senza Tauri)
 npm run dev
 ```
@@ -123,9 +127,16 @@ git restore .
 | Branch | Scopo |
 |---|---|
 | `main` | Versione stabile |
-| `feature/dashboard` | Lavori sulla dashboard |
-| `feature/clienti` | Lavori sulla pagina clienti |
-| `feature/lavori` | Lavori sulla pagina lavori |
+| `feature/dashboard` | Ridisegno dashboard |
+| `feature/clienti` | Pagina clienti |
+| `feature/lavori` | Pagina lavori + foto prima/dopo |
+| `feature/pagamenti` | Pagina pagamenti |
+| `feature/statistiche` | Pagina statistiche |
+| `feature/impostazioni` | Pagina impostazioni |
+| `feature/magazzino` | Pagina magazzino materiale (futuro) |
+| `feature/crud` | CRUD reali con SQLite |
+| `feature/database` | Schema e setup database SQLite |
+| `feature/auth` | Autenticazione e ruoli |
 | `Total-CSS` | Lavori sullo stile globale |
 | `docs/setup-progetto` | Documentazione e configurazione |
 
@@ -152,12 +163,13 @@ Struttura di ogni prompt per Claude Code:
 
 | Pagina | Stato |
 |---|---|
-| Dashboard | ✅ UI completata con mock data |
+| Dashboard | 🔄 Da ridisegnare |
 | Clienti | ✅ UI completata con mock data |
-| Lavori | ✅ UI completata con mock data |
-| Pagamenti | ⏳ Placeholder |
-| Statistiche | ⏳ Placeholder |
-| Impostazioni | ⏳ Placeholder |
+| Lavori | ✅ UI completata — da aggiungere foto prima/dopo |
+| Pagamenti | ⏳ Da progettare e implementare |
+| Statistiche | ⏳ Da progettare e implementare |
+| Impostazioni | ⏳ Da progettare e implementare |
+| Magazzino | ⏳ Da progettare e implementare (fase futura) |
 
 Navigazione tramite **sidebar laterale**.
 
@@ -177,23 +189,7 @@ Navigazione tramite **sidebar laterale**.
 
 ### Dashboard
 
-Riepilogo operativo del laboratorio.
-
-Card KPI:
-| Card | Valore mock | Sottotesto |
-|---|---|---|
-| Lavori attivi | 8 | +2 questa settimana |
-| Consegne oggi | 2 | 1 urgente |
-| Da incassare | € 85 | 3 lavori non pagati |
-| Clienti registrati | 24 | +3 questo mese |
-
-Tabella "Lavori recenti" (mock):
-| Codice | Cliente | Lavoro | Stato | Consegna | Prezzo |
-|---|---|---|---|---|---|
-| GS-001 | Mario Rossi | Orlo pantalone elegante | In lavorazione | Oggi, 17:00 | € 15 |
-| GS-002 | Luca Bianchi | Stringere vita jeans | Pronto | Oggi, 18:30 | € 20 |
-| GS-003 | Anna Verdi | Sostituzione zip | In attesa cliente | Domani | € 18 |
-| GS-004 | Giuseppe Neri | Accorciare pantalone | Da iniziare | Venerdì | € 12 |
+Riepilogo operativo del laboratorio. **Attualmente da ridisegnare** — il design sarà definito nella sessione dedicata.
 
 ---
 
@@ -211,7 +207,9 @@ Funzionalità: lista, ricerca, nuovo cliente, modifica, dettaglio, storico lavor
 
 Cuore dell'applicazione — gestione di ogni lavoro su un capo sartoriale.
 
-Campi principali: `id`, `codice` (es. GS-001), `clienteId`, `titolo`, `descrizione`, `tipo`, `stato`, `dataRicezione`, `dataConsegna`, `prezzoStimato`, `prezzoFinale`, `note`
+Campi principali: `id`, `codice` (es. GS-001), `clienteId`, `descrizione`, `tipo`, `stato`, `dataRicezione`, `dataConsegna`, `prezzoStimato`, `prezzoFinale`, `note`
+
+**Da aggiungere:** sezione foto prima/dopo all'interno del dettaglio lavoro — galleria con due stati (prima della lavorazione, dopo la lavorazione).
 
 **Tipi di lavoro:**
 - Orlo pantalone, Stringere vita, Accorciare gamba, Allargare pantalone, Sostituzione zip, Riparazione strappo, Pantalone su misura, Altro
@@ -230,11 +228,29 @@ Campi principali: `id`, `codice` (es. GS-001), `clienteId`, `titolo`, `descrizio
 
 ### Pagamenti
 
-Gestione stato economico dei lavori.
+Gestione stato economico dei lavori. **Da progettare.**
 
-**Stati:** Non pagato (`UNPAID`), Acconto ricevuto (`DEPOSIT_PAID`), Pagato (`PAID`)
+**Stati previsti:** Non pagato (`UNPAID`), Acconto ricevuto (`DEPOSIT_PAID`), Pagato (`PAID`)
 
-**Metodi:** Contanti (`CASH`), Carta (`CARD`), Bonifico (`BANK_TRANSFER`), Altro (`OTHER`)
+**Metodi previsti:** Contanti (`CASH`), Carta (`CARD`), Bonifico (`BANK_TRANSFER`), Altro (`OTHER`)
+
+---
+
+### Statistiche
+
+Reportistica e andamento del laboratorio. **Da progettare.**
+
+---
+
+### Impostazioni
+
+Configurazione dell'applicazione. **Da progettare.**
+
+---
+
+### Magazzino *(fase futura)*
+
+Gestione del materiale in magazzino (stoffe, zip, fili, accessori). **Da progettare.**
 
 ---
 
@@ -247,8 +263,13 @@ id, firstName, lastName, phone, email, notes, createdAt, updatedAt
 
 ### Project
 ```
-id, clientId, title, description, type, status,
+id, clientId, description, type, status,
 receivedAt, dueDate, estimatedPrice, finalPrice, notes, createdAt, updatedAt
+```
+
+### ProjectPhoto *(da aggiungere)*
+```
+id, projectId, phase (before|after), filePath, createdAt
 ```
 
 ### Payment
@@ -256,7 +277,12 @@ receivedAt, dueDate, estimatedPrice, finalPrice, notes, createdAt, updatedAt
 id, projectId, amount, status, method, paidAt, notes, createdAt, updatedAt
 ```
 
-### User (futuro — per autenticazione)
+### InventoryItem *(futuro — Magazzino)*
+```
+id, name, category, quantity, unit, minQuantity, notes, createdAt, updatedAt
+```
+
+### User *(futuro — Autenticazione)*
 ```
 id, name, email, passwordHash, role, createdAt, updatedAt
 ```
@@ -266,34 +292,56 @@ id, name, email, passwordHash, role, createdAt, updatedAt
 ## Roadmap
 
 ### ✅ Fase 1 — UI statica
-Layout, sidebar, dashboard, pagine principali, dati mock, componenti riutilizzabili.
+Layout, sidebar, pagine principali, dati mock, componenti riutilizzabili.
 
 ### ✅ Fase 2 — Pulizia dashboard
 Testi realistici, dati mock coerenti, stati uniformati, tono artigianale.
 
-### ✅ Fase 3 — Pagine Clienti e Lavori
-Lista clienti, lista lavori, pagine dettaglio, form nuovo cliente, form nuovo lavoro.
+### ✅ Fase 3 — Pagina Clienti
+Lista clienti, ricerca, dettaglio, form nuovo cliente e modifica.
 
-### ✅ Fase 3b — Conversione a Tauri
+### ✅ Fase 4 — Pagina Lavori
+Lista con filtri per stato, dettaglio lavoro, form nuovo lavoro e modifica.
+
+### ✅ Fase 5 — Conversione a Tauri
 Integrazione Tauri 2.0, Next.js in static export, app desktop nativa, installer `.dmg`.
 
-### ⏳ Fase 4 — Database SQLite
-Plugin SQL Tauri, schema SQLite, migrations, seed data realistici.
+### 🔄 Fase 6 — Foto prima/dopo (Pagina Lavori)
+Sezione foto nel dettaglio lavoro: galleria con due fasi (prima/dopo). Mock con immagini placeholder.
 
-### ⏳ Fase 5 — CRUD reali
-Clienti, lavori e pagamenti collegati al database reale.
+### 🔄 Fase 7 — Ridisegno Dashboard
+Nuovo layout dashboard: da definire in sessione Q&A dedicata prima di qualsiasi implementazione.
 
-### ⏳ Fase 6 — Dashboard dinamica
-Conteggio lavori per stato, consegne imminenti, importi da incassare, clienti recenti.
+### ⏳ Fase 8 — Pagina Pagamenti
+Lista pagamenti, stato per lavoro, cambio metodo e stato. UI con mock data.
 
-### ⏳ Fase 7 — Autenticazione
-Login, logout, utente amministratore, protezione pagine, ruoli base.
+### ⏳ Fase 9 — Pagina Statistiche
+Grafici e KPI: lavori per periodo, incassi, tipi di lavoro più frequenti. UI con mock data.
+
+### ⏳ Fase 10 — Pagina Impostazioni
+Configurazione app: dati del laboratorio, preferenze, eventuali opzioni di backup. UI con mock data.
+
+### ⏳ Fase 11 — Database SQLite
+Schema SQLite, migrations, seed data realistici. Fondamenta del sistema dati.
+
+### ⏳ Fase 12 — CRUD reali
+Tutte le pagine collegate al database reale. Sostituzione completa dei mock data.
+
+### ⏳ Fase 13 — Dashboard dinamica
+KPI calcolati in tempo reale dal database.
+
+### ⏳ Fase 14 — Autenticazione
+Login, logout, utente amministratore, protezione pagine.
+
+### ⏳ Fase 15 — Pagina Magazzino
+Gestione materiale: lista, aggiunta, modifica, soglie minime. UI + CRUD.
 
 ---
 
 ## Funzionalità future
 
-- Foto capi prima/dopo
+- Foto capi prima/dopo *(in lavorazione — Fase 6)*
+- Gestione magazzino materiale *(in roadmap — Fase 15)*
 - Gestione misure cliente (vita, fianchi, lunghezza gamba, ecc.)
 - Ricevuta PDF
 - Notifiche promemoria consegne

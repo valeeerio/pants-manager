@@ -1,197 +1,251 @@
-# Gestionale Sartoria — Contesto per Claude Code
+# CLAUDE.md — Istruzioni operative per Claude Code
 
-## Cos'è questo progetto
-
-Web app gestionale per un piccolo laboratorio artigianale sartoriale.
-Gestisce il flusso completo: Cliente → Lavoro → Stato → Prezzo → Pagamento → Consegna.
-Sostituisce appunti cartacei, WhatsApp e fogli sparsi. Utente finale non tecnico.
-
-> Il nome della repository GitHub è `pants-manager` (provvisorio).
-> Il nome del progetto nei testi e nella UI è sempre **Gestionale Sartoria**.
+Questo file definisce le regole di lavoro, i pattern UI consolidati e il flusso operativo
+per il progetto **Gestionale Sartoria** (repository: `pants-manager`).
+Viene letto automaticamente da Claude Code ad ogni sessione.
 
 ---
 
 ## Stack tecnico
 
-- **Framework:** Next.js con App Router
-- **Linguaggio:** TypeScript
-- **Stile:** Tailwind CSS + shadcn/ui
-- **ORM:** Prisma
-- **Database:** MySQL in Docker
-- **Infrastruttura:** Docker Compose
+| Tecnologia | Ruolo |
+|---|---|
+| Next.js 15 (App Router, `static export`) | Framework frontend |
+| TypeScript | Linguaggio |
+| Tailwind CSS | Stile |
+| shadcn/ui | Componenti UI |
+| Tauri 2.0 | App desktop nativa |
+| SQLite (plugin Tauri SQL) | Database locale — non ancora collegato |
 
 ---
 
-## Regole fondamentali — leggile sempre prima di toccare qualsiasi file
+## Stato pagine
 
-1. **Tutta la UI è in italiano.** Nessun testo in inglese visibile all'utente.
-2. **I codici lavoro usano il prefisso `GS-`** (es. GS-001). Mai `PM-` o altri prefissi.
-3. **Nessuna modifica a database, Prisma, API o autenticazione** finché non esplicitamente richiesto.
-4. **Prompt piccoli e mirati.** Non fare modifiche grandi o non richieste.
-5. **Dopo ogni modifica esegui `npm run build`** e segnala eventuali errori.
-6. **Non eliminare componenti esistenti** se non strettamente necessario.
-7. **Controlla sempre branch e stato Git** prima di iniziare:
-   ```bash
-   git branch
-   git status
-   ```
-8. **Non lavorare mai su `main` direttamente.** Usa sempre il branch di lavoro attivo.
+| Pagina | Stato |
+|---|---|
+| Clienti | ✅ Completata con mock data |
+| Lavori | ✅ Completata con mock data — mancano foto prima/dopo |
+| Dashboard | 🔄 Da ridisegnare |
+| Pagamenti | ⏳ Da progettare e implementare |
+| Statistiche | ⏳ Da progettare e implementare |
+| Impostazioni | ⏳ Da progettare e implementare |
+| Magazzino | ⏳ Da progettare e implementare (fase futura) |
+
+**Tutto il progetto usa attualmente mock data statici — nessun database collegato.**
+
+---
+
+## Regole fondamentali
+
+1. **Prompt piccoli e mirati** — un obiettivo per volta, nessuna modifica massiva
+2. **`npm run build` obbligatorio** dopo ogni modifica prima del commit
+3. **Commit solo con build pulita** e UI visivamente corretta
+4. **Sempre su branch feature** — mai toccare `main` direttamente
+5. **Nessuna modifica a database, schema SQLite o Tauri backend** durante la fase UI
+6. **Tutti i testi UI in italiano** — zero stringhe in inglese nelle pagine visibili
+7. **Tono artigianale e caldo** — no linguaggio aziendale, no B2B
+8. **Non reinventare i pattern UI** — usare sempre quelli consolidati sotto
+
+---
+
+## Struttura obbligatoria di ogni prompt
+
+```
+1. Obiettivo         — cosa deve fare questa modifica
+2. File da toccare   — lista esplicita dei file coinvolti
+3. File da NON toccare — lista esplicita di ciò che non va cambiato
+4. Mock data         — dati di esempio se la modifica ne richiede
+5. Verifica finale   — npm run build
+```
+
+---
+
+## Palette e stile
+
+```
+Accent:     amber-600 / amber-700
+Sidebar:    stone-900
+Background: stone-50
+Testo:      slate-800 (primario) · slate-500 (secondario)
+Border:     stone-200
+Hover:      amber-50 / stone-100
+```
+
+- Codici lavoro: `GS-001`, `GS-002` — **mai** `PM-`
+- Icone: `lucide-react` — nessuna altra libreria di icone
+- Componenti: `shadcn/ui` — nessun componente UI esterno aggiuntivo
+
+---
+
+## Pattern UI consolidati
+
+### Modal — createPortal (OBBLIGATORIO)
+```tsx
+// Sempre via ReactDOM.createPortal su document.body
+// MAI tramite z-index su elementi nested — causa stacking context bug
+import ReactDOM from 'react-dom'
+
+{isOpen && ReactDOM.createPortal(
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+    <div className="relative bg-white rounded-lg shadow-xl ...">
+      {/* contenuto */}
+    </div>
+  </div>,
+  document.body
+)}
+```
+
+### Scroll lock
+```tsx
+// Bloccare lo scroll del body su TUTTI gli stati modal aperti
+useEffect(() => {
+  const anyOpen = isDetailOpen || isNewOpen || isEditOpen
+  document.body.style.overflow = anyOpen ? 'hidden' : ''
+  return () => { document.body.style.overflow = '' }
+}, [isDetailOpen, isNewOpen, isEditOpen])
+```
+
+### Chiusura con ESC
+```tsx
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose()
+  }
+  document.addEventListener('keydown', handler)
+  return () => document.removeEventListener('keydown', handler)
+}, [onClose])
+```
+
+### Banner di conferma (auto-dismiss)
+```tsx
+const [showBanner, setShowBanner] = useState(false)
+
+// Dopo salvataggio:
+setShowBanner(true)
+
+useEffect(() => {
+  if (!showBanner) return
+  const t = setTimeout(() => setShowBanner(false), 3000)
+  return () => clearTimeout(t)
+}, [showBanner])
+
+// UI:
+{showBanner && (
+  <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+    Salvato con successo
+  </div>
+)}
+```
+
+### Sub-modal di conferma (azioni distruttive)
+```tsx
+// Obbligatorio per Elimina e qualsiasi azione irreversibile
+// È un secondo modal sopra il modal principale — stesso pattern createPortal
+const [showConfirm, setShowConfirm] = useState(false)
+```
+
+### Tabella con ordinamento
+```tsx
+import { ChevronUp, ChevronDown } from 'lucide-react'
+
+type SortDir = 'asc' | 'desc'
+const [sortCol, setSortCol] = useState<string>('dataConsegna')
+const [sortDir, setSortDir] = useState<SortDir>('asc')
+
+const handleSort = (col: string) => {
+  if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+  else { setSortCol(col); setSortDir('asc') }
+}
+```
+
+### Filter bar
+```tsx
+// Ordine fisso da sinistra: [Search] [Dropdown1] [Dropdown2] [Dropdown3]
+// La search è real-time su nome, codice, tipo
+// Tutti i filtri si combinano tra loro (AND logic)
+// Sotto la tabella: "Stai visualizzando X di Y lavori" + "Carica altri"
+```
+
+### Validazione form inline
+```tsx
+// Errori mostrati sotto il campo, in rosso, senza alert esterni
+const [errors, setErrors] = useState<Record<string, string>>({})
+
+// Esempio:
+{errors.cliente && (
+  <p className="text-sm text-red-600 mt-1">{errors.cliente}</p>
+)}
+```
+
+---
+
+## Branch attivi
+
+| Branch | Scopo |
+|---|---|
+| `main` | Versione stabile — solo merge da feature branch |
+| `feature/dashboard` | Ridisegno dashboard |
+| `feature/clienti` | Pagina clienti |
+| `feature/lavori` | Pagina lavori + foto prima/dopo |
+| `feature/pagamenti` | Pagina pagamenti |
+| `feature/statistiche` | Pagina statistiche |
+| `feature/impostazioni` | Pagina impostazioni |
+| `feature/magazzino` | Pagina magazzino (fase futura) |
+| `feature/crud` | CRUD reali con SQLite |
+| `feature/database` | Schema e setup database SQLite |
+| `feature/auth` | Autenticazione e ruoli |
+| `Total-CSS` | Modifiche CSS globali |
+| `docs/setup-progetto` | Documentazione |
+
+---
+
+## Comandi
+
+```bash
+npm run dev        # Dev server Next.js nel browser (uso quotidiano)
+npx tauri dev      # Dev con finestra desktop Tauri (verifica finale)
+npm run build      # Verifica build — OBBLIGATORIO dopo ogni modifica
+npx tauri build    # Genera installer .dmg (solo per distribuzione)
+```
 
 ---
 
 ## Flusso Git
 
 ```bash
-# Prima di ogni sessione
+# Inizio sessione — verificare sempre il branch
 git branch
 git status
 
-# Dopo le modifiche
+# Fine sessione
 npm run build
-
-# Se tutto funziona
 git add .
 git commit -m "descrizione chiara della modifica"
 git push
 
-# Se qualcosa è rotto e non hai ancora fatto commit
+# Rollback pre-commit
 git restore .
 ```
 
 ---
 
-## Stato attuale del progetto
+## Roadmap fasi
 
-**Fase corrente:** UI statica con mock data — nessun database collegato.
-
-| Fase | Descrizione | Stato |
-|------|-------------|-------|
-| 1 | UI statica, layout, sidebar, dashboard, mock data | ✅ Completata |
-| 2 | Pulizia dashboard: testi realistici, stati uniformati | ✅ Completata |
-| 3 | Pagine Clienti e Lavori: liste, dettaglio, form | 🔄 In corso |
-| 4 | Database: Docker, MySQL, Prisma schema, migration, seed | ⏳ Non iniziata |
-| 5 | CRUD reali: clienti, lavori, pagamenti da DB | ⏳ Non iniziata |
-| 6 | Dashboard dinamica con dati reali | ⏳ Non iniziata |
-| 7 | Autenticazione: login, logout, ruoli | ⏳ Non iniziata |
-
----
-
-## Pagine della web app
-
-| Pagina | Percorso | Stato |
-|--------|----------|-------|
-| Dashboard | `/` | ✅ UI pronta |
-| Clienti | `/clienti` | 🔄 In corso |
-| Lavori | `/lavori` | 🔄 In corso |
-| Pagamenti | `/pagamenti` | ⏳ Placeholder |
-| Statistiche | `/statistiche` | ⏳ Placeholder |
-| Impostazioni | `/impostazioni` | ⏳ Placeholder |
-
----
-
-## Dati mock di riferimento
-
-### Dashboard — card principali
-
-| Card | Valore | Sottotesto |
-|------|--------|------------|
-| Lavori attivi | 8 | +2 questa settimana |
-| Consegne oggi | 2 | 1 urgente |
-| Da incassare | € 85 | 3 lavori non pagati |
-| Clienti registrati | 24 | +3 questo mese |
-
-### Tabella "Lavori recenti"
-
-| Codice | Cliente | Lavoro | Stato | Consegna | Prezzo |
-|--------|---------|--------|-------|----------|--------|
-| GS-001 | Mario Rossi | Orlo pantalone elegante | In lavorazione | Oggi, 17:00 | € 15 |
-| GS-002 | Luca Bianchi | Stringere vita jeans | Pronto | Oggi, 18:30 | € 20 |
-| GS-003 | Anna Verdi | Sostituzione zip | In attesa cliente | Domani | € 18 |
-| GS-004 | Giuseppe Neri | Accorciare pantalone | Da iniziare | Venerdì | € 12 |
-
-### Clienti di esempio
-
-Mario Rossi, Luca Bianchi, Anna Verdi, Giuseppe Neri, Francesca Romano, Antonio Greco
-
----
-
-## Modello dati (riferimento per la fase UI)
-
-### Stati lavoro
-
-| Valore DB | Etichetta UI |
-|-----------|-------------|
-| `TODO` | Da iniziare |
-| `IN_PROGRESS` | In lavorazione |
-| `WAITING_CUSTOMER` | In attesa cliente |
-| `COMPLETED` | Pronto |
-| `DELIVERED` | Consegnato |
-| `CANCELLED` | Annullato |
-
-### Tipi di lavoro (UI)
-
-Orlo pantalone · Stringere vita · Accorciare gamba · Allargare pantalone · Sostituzione zip · Riparazione strappo · Pantalone su misura · Altro
-
-### Stati pagamento
-
-| Valore DB | Etichetta UI |
-|-----------|-------------|
-| `UNPAID` | Non pagato |
-| `DEPOSIT_PAID` | Acconto ricevuto |
-| `PAID` | Pagato |
-
-### Metodi pagamento
-
-| Valore DB | Etichetta UI |
-|-----------|-------------|
-| `CASH` | Contanti |
-| `CARD` | Carta |
-| `BANK_TRANSFER` | Bonifico |
-| `OTHER` | Altro |
-
----
-
-## Campi principali dei modelli
-
-**Client:** id, firstName, lastName, phone, email?, notes?, createdAt, updatedAt
-
-**Project:** id, codice (GS-XXX), clientId, title, description, type, status, receivedAt, dueDate, estimatedPrice, finalPrice?, notes?, createdAt, updatedAt
-
-**Payment:** id, projectId, amount, status, method, paidAt?, notes?, createdAt, updatedAt
-
----
-
-## Stile UI — criteri
-
-- Moderna, pulita, ordinata, responsive
-- Tono artigianale: piccolo laboratorio, non grande azienda
-- **Evitare:** "atelier", "boutique", "sartorie partner", dati economici irrealistici, toni B2B
-- Sidebar laterale per la navigazione principale
-- Badge colorati per gli stati
-- Form semplici con campi chiari
-
----
-
-## Configurazione database (fase futura)
-
-```env
-DATABASE_URL="mysql://sartoria_user:sartoria_password@localhost:3306/gestionale_sartoria"
-```
-
-File da creare a tempo debito: `docker-compose.yml`, `prisma/schema.prisma`, `prisma/seed.ts`, `src/lib/prisma.ts`
-
----
-
-## Comandi utili
-
-```bash
-npm run dev          # Avvia il server di sviluppo
-npm run build        # Build di verifica — da eseguire dopo ogni modifica
-npx prisma generate  # Genera il client Prisma (fase futura)
-npx prisma studio    # Interfaccia visuale DB (fase futura)
-```
-
----
-
-*Questo file viene aggiornato manualmente dopo ogni sessione significativa.*
-*Ultima modifica: fase 3 — pagine Clienti e Lavori in corso.*
+| # | Fase | Stato | Branch |
+|---|---|---|---|
+| 1 | UI statica | ✅ Completata | main |
+| 2 | Pulizia dashboard | ✅ Completata | feature/dashboard |
+| 3 | Pagina Clienti | ✅ Completata | feature/clienti |
+| 4 | Pagina Lavori | ✅ Completata | feature/lavori |
+| 5 | Conversione a Tauri | ✅ Completata | main |
+| 6 | Foto prima/dopo (Lavori) | 🔄 In programma | feature/lavori |
+| 7 | Ridisegno Dashboard | 🔄 In programma | feature/dashboard |
+| 8 | Pagina Pagamenti | ⏳ Da fare | feature/pagamenti |
+| 9 | Pagina Statistiche | ⏳ Da fare | feature/statistiche |
+| 10 | Pagina Impostazioni | ⏳ Da fare | feature/impostazioni |
+| 11 | Database SQLite | ⏳ Da fare | feature/database |
+| 12 | CRUD reali | ⏳ Da fare | feature/crud |
+| 13 | Dashboard dinamica | ⏳ Da fare | feature/dashboard |
+| 14 | Autenticazione | ⏳ Da fare | feature/auth |
+| 15 | Pagina Magazzino | ⏳ Da fare | feature/magazzino |
