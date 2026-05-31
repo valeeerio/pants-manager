@@ -230,6 +230,41 @@ git restore .
 
 ---
 
+## Aggiornamento automatico documentazione — OBBLIGATORIO
+
+Ad ogni modifica completata e verificata, Claude Code deve aggiornare
+**entrambi** i file di documentazione prima del commit finale.
+
+### Cosa aggiornare in CLAUDE.md
+- **Tabella "Stato pagine"** — aggiorna lo stato della pagina coinvolta
+- **Tabella "Roadmap fasi"** — aggiorna lo stato della fase (✅ / 🔄 / ⏳) e il branch
+- **Pattern UI consolidati** — aggiungi il pattern se la modifica ne introduce uno nuovo
+
+### Cosa aggiornare in README.md
+- **Sezione "Stato attuale del progetto"** — aggiorna i bullet ✅ / 🔄 / ⏳
+- **Tabella "Pagine principali"** — aggiorna lo stato della pagina coinvolta
+- **Sezione "Roadmap"** — aggiorna lo stato della fase completata o avviata
+- **Modello dati** — aggiorna se vengono aggiunti o modificati campi o tabelle
+
+### Regola del commit
+Il commit di ogni modifica deve includere **sempre** tutti e tre:
+```
+git add <file modificati> README.md CLAUDE.md
+git commit -m "tipo(scope): descrizione modifica"
+git push
+```
+
+### Formato messaggi di commit
+```
+feat(lavori): aggiunta sezione foto prima/dopo nel dettaglio lavoro
+feat(dashboard): ridisegno layout con nuovi widget KPI
+feat(pagamenti): implementazione pagina pagamenti con mock data
+fix(modal): corretto scroll lock su apertura modale annidato
+docs: aggiornamento roadmap e stato pagine
+```
+
+---
+
 ## Roadmap fasi
 
 | # | Fase | Stato | Branch |
