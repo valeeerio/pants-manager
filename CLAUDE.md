@@ -1,107 +1,48 @@
 # CLAUDE.md — Istruzioni operative per Claude Code
 
-Questo file viene letto automaticamente da Claude Code ad ogni sessione.
-Definisce regole, pattern UI, flusso di lavoro e stato del progetto.
+File letto automaticamente da Claude Code ad ogni sessione.
+Contiene SOLO regole operative: come scrivere codice in questo progetto.
+
+> Lo stato delle fasi e la roadmap NON vivono qui — sono tracciati su Notion.
+> La descrizione del progetto è nel README.md.
 
 ---
 
-## Progetto
+## Vincoli tecnici — LEGGERE PRIMA DI SCRIVERE CODICE
 
-**Nome:** Gestionale Sartoria
-**Repository:** `pants-manager`
-**Tipo:** App desktop nativa (Tauri 2.0 + Next.js 15 static export)
-**Database:** SQLite locale via plugin Tauri SQL — non ancora collegato
+**Progetto:** Gestionale Sartoria · Repository: `pants-manager`
+**Tipo:** App desktop Tauri 2.0 + Next.js 15 + TypeScript + Tailwind + shadcn/ui
 
----
+1. **Next.js è in `static export`** (`output: "export"`)
+   - ❌ NO API Routes (`app/api/`)
+   - ❌ NO Server Components con data fetching
+   - ❌ NO middleware, NO `next/image` con ottimizzazione server
+   - ✅ Solo client components e static generation
 
-## Stack
+2. **Il database SQLite NON è ancora collegato**
+   - Tutte le pagine usano mock data statici in file locali
+   - ❌ NON aggiungere chiamate a database, plugin SQL o `invoke()` senza richiesta esplicita
 
-| Tecnologia | Ruolo |
-|---|---|
-| Next.js 15 (App Router, `static export`) | Framework frontend |
-| TypeScript | Linguaggio |
-| Tailwind CSS | Stile |
-| shadcn/ui | Componenti UI |
-| Tauri 2.0 | App desktop nativa |
-| SQLite (plugin Tauri SQL) | Database locale — da collegare |
-
----
-
-## Stato pagine
-
-| Pagina | Stato |
-|---|---|
-| Pagina Clienti | ✅ Completata con mock data |
-| Pagina Lavori | ✅ Completata con mock data |
-| Dashboard | 🔄 In programma — da ridisegnare |
-| Pagina Pagamenti | ⏳ Da fare |
-| Pagina Statistiche | ⏳ Da fare |
-| Pagina Impostazioni | ⏳ Da fare |
-| Pagina Magazzino | ⏳ Da fare |
-
-**Tutto il progetto usa mock data statici — nessun database collegato.**
+3. **Backend = Tauri** (quando arriverà)
+   - Le operazioni dati passeranno da `invoke()` Tauri, mai da HTTP/fetch
 
 ---
 
 ## Regole fondamentali
 
-1. **Prompt piccoli e mirati** — un obiettivo per volta, nessuna modifica massiva
+1. **Un obiettivo per volta** — nessuna modifica fuori dallo scope del prompt
 2. **`npm run build` obbligatorio** dopo ogni modifica, prima del commit
-3. **Commit solo con build pulita** e UI visivamente corretta
-4. **Sempre su branch feature** — mai toccare `main` direttamente
-5. **Nessuna modifica a database, SQLite o Tauri backend** durante la fase UI
-6. **Tutti i testi UI in italiano** — zero stringhe in inglese nelle pagine visibili
-7. **Tono artigianale e caldo** — no linguaggio aziendale, no B2B
-8. **Non reinventare i pattern UI** — usare sempre i pattern consolidati sotto
+3. **Commit solo con build pulita**
+4. **Sempre su branch feature** — mai committare direttamente su `main`
+5. **Tutti i testi UI in italiano** — zero stringhe in inglese visibili
+6. **Tono artigianale e caldo** — no linguaggio aziendale/B2B
+7. **Codici lavoro `GS-xxx`** — mai `PM-`
+8. **Non reinventare i pattern** — usare quelli consolidati sotto
+9. **MAI eseguire `git add`, `commit` o `push` senza che il prompt lo richieda**
 
 ---
 
-## Struttura obbligatoria di ogni prompt
-
-```
-1. Obiettivo           — cosa deve fare questa modifica
-2. File da toccare     — lista esplicita dei file coinvolti
-3. File da NON toccare — lista esplicita di ciò che non va cambiato
-4. Mock data           — dati di esempio se necessari
-5. Verifica finale     — npm run build
-```
-
----
-
-## Aggiornamento automatico documentazione — OBBLIGATORIO
-
-Ad ogni modifica completata e verificata, aggiornare **entrambi** i file prima del commit:
-
-### Cosa aggiornare in CLAUDE.md
-- **Tabella "Stato pagine"** — stato della pagina coinvolta
-- **Tabella "Roadmap"** — stato della fase (✅ / 🔄 / ⏳)
-- **Pattern UI consolidati** — aggiungere se la modifica introduce un nuovo pattern
-
-### Cosa aggiornare in README.md
-- **Tabella "Stato attuale"** — stato della pagina coinvolta
-- **Sezione della pagina modificata** — aggiornare funzionalità implementate
-- **Tabella "Roadmap"** — stato della fase
-- **Modello dati** — se vengono aggiunti campi o tabelle
-
-### Regola del commit
-```bash
-git add <file modificati> README.md CLAUDE.md
-git commit -m "tipo(scope): descrizione"
-git push
-```
-
-### Formato messaggi di commit
-```
-feat(lavori): aggiunta galleria foto prima/dopo nel dettaglio
-feat(pagamenti): implementazione pagina pagamenti con mock data
-feat(dashboard): ridisegno layout con nuovi widget KPI
-fix(modal): corretto scroll lock su apertura modale annidato
-docs: aggiornamento roadmap e stato pagine
-```
-
----
-
-## Palette e stile
+## Palette
 
 ```
 Accent:     amber-600 / amber-700
@@ -110,11 +51,12 @@ Background: stone-50
 Testo:      slate-800 (primario) · slate-500 (secondario)
 Border:     stone-200
 Hover:      amber-50 / stone-100
+Successo:   green-50 / green-200 / green-800
+Errore:     red-600
 ```
 
-- Codici lavoro: `GS-001`, `GS-002` — **mai** `PM-`
-- Icone: `lucide-react` — nessuna altra libreria di icone
-- Componenti: `shadcn/ui` — nessun componente UI esterno aggiuntivo
+- Icone: solo `lucide-react`
+- Componenti: solo `shadcn/ui` — nessuna libreria UI aggiuntiva
 
 ---
 
@@ -122,8 +64,8 @@ Hover:      amber-50 / stone-100
 
 ### Modal — createPortal (OBBLIGATORIO)
 ```tsx
-// Sempre via ReactDOM.createPortal su document.body
-// MAI tramite z-index su elementi nested — causa stacking context bug
+// SEMPRE via ReactDOM.createPortal su document.body
+// MAI z-index su elementi annidati — causa stacking context bug
 import ReactDOM from 'react-dom'
 
 {isOpen && ReactDOM.createPortal(
@@ -139,7 +81,7 @@ import ReactDOM from 'react-dom'
 
 ### Scroll lock
 ```tsx
-// Chiave su TUTTI gli stati modal aperti simultaneamente
+// Su TUTTI gli stati modal aperti simultaneamente
 useEffect(() => {
   const anyOpen = isDetailOpen || isNewOpen || isEditOpen
   document.body.style.overflow = anyOpen ? 'hidden' : ''
@@ -177,8 +119,8 @@ useEffect(() => {
 
 ### Sub-modal di conferma (azioni distruttive)
 ```tsx
-// Obbligatorio per Elimina e qualsiasi azione irreversibile
-// Stesso pattern createPortal — modal sopra modal
+// OBBLIGATORIO per Elimina e azioni irreversibili
+// Secondo modal sopra il primo — stesso pattern createPortal
 const [showConfirm, setShowConfirm] = useState(false)
 ```
 
@@ -197,86 +139,85 @@ const handleSort = (col: string) => {
 ```
 
 ### Filter bar
-```tsx
-// Ordine fisso: [Search] [Dropdown 1] [Dropdown 2] [Dropdown 3]
-// Search: real-time su nome, codice, tipo — combinabile con i dropdown
-// Tutti i filtri si combinano tra loro (AND logic)
-// Sotto la tabella: "Stai visualizzando X di Y risultati" + bottone "Carica altri"
+```
+Ordine fisso: [Search] [Dropdown 1] [Dropdown 2] [Dropdown 3]
+- Search real-time su nome, codice, tipo
+- Tutti i filtri combinabili tra loro (AND logic)
+- Sotto la tabella: "Stai visualizzando X di Y risultati" + bottone "Carica altri"
 ```
 
 ### Validazione form inline
 ```tsx
+// Errori sotto il campo, in rosso — MAI alert() o toast esterni
 const [errors, setErrors] = useState<Record<string, string>>({})
 
-// Errori mostrati sotto il campo, in rosso, senza alert esterni
 {errors.campo && (
   <p className="text-sm text-red-600 mt-1">{errors.campo}</p>
 )}
 ```
 
----
-
-## Branch attivi
-
-| Branch | Scopo |
-|---|---|
-| `main` | Versione stabile — solo merge da feature branch |
-| `feature/dashboard` | Ridisegno dashboard |
-| `feature/clienti` | Pagina clienti |
-| `feature/lavori` | Pagina lavori |
-| `feature/pagamenti` | Pagina pagamenti |
-| `feature/statistiche` | Pagina statistiche |
-| `feature/impostazioni` | Pagina impostazioni |
-| `feature/magazzino` | Pagina magazzino |
-| `feature/database` | Schema e setup database SQLite |
-| `feature/crud` | CRUD reali con SQLite |
-| `feature/auth` | Autenticazione e ruoli |
-| `Total-CSS` | Modifiche CSS globali |
-| `docs/setup-progetto` | Documentazione |
+### Stati lavoro — badge
+```
+Da iniziare        → TODO
+In lavorazione     → IN_PROGRESS
+In attesa cliente  → WAITING_CUSTOMER
+Pronto             → COMPLETED
+Consegnato         → DELIVERED
+Annullato          → CANCELLED
+```
 
 ---
 
 ## Comandi
 
 ```bash
-npm run dev        # Dev server Next.js nel browser (uso quotidiano)
-npx tauri dev      # Dev con finestra desktop Tauri (verifica finale)
-npm run build      # Verifica build — OBBLIGATORIO dopo ogni modifica
-npx tauri build    # Genera installer .dmg (solo per distribuzione)
+npm run dev        # Dev quotidiano nel browser
+npx tauri dev      # Dev con finestra desktop nativa (verifica prima dei commit)
+npm run build      # Verifica build Next.js — OBBLIGATORIA dopo ogni modifica
+npx tauri build    # Build desktop completa + installer .dmg
 ```
+
+### Livelli di verifica
+- **Modifica UI ordinaria** → `npm run build`
+- **Fine fase / modifica strutturale** (config, layout globale, dipendenze) → `npm run build` + `npx tauri build`
+- **Modifica a `src-tauri/` o `next.config.ts`** → SEMPRE entrambe le build
 
 ---
 
 ## Flusso Git
 
 ```bash
-# Inizio sessione
+# Inizio sessione — SEMPRE verificare dove si è
 git branch && git status
 
-# Fine sessione
-npm run build
-git add <file> README.md CLAUDE.md
+# Fine modifica
+npm run build              # sempre
+npx tauri build            # solo se richiesto dal livello di verifica
+
+# Commit (solo se richiesto dal prompt)
+git add <file modificati>
 git commit -m "tipo(scope): descrizione"
 git push
-
-# Rollback pre-commit
-git restore .
 ```
+
+### Formato messaggi di commit
+```
+feat(lavori): aggiunta galleria foto prima/dopo nel dettaglio
+fix(modal): corretto scroll lock su modale annidato
+docs: aggiornamento README
+refactor(clienti): estratto componente tabella riutilizzabile
+```
+
+### Branch
+- `main` — stabile, solo merge da feature branch
+- `feature/<area>` — un branch per area di lavoro (es. `feature/lavori`, `feature/pagamenti`)
+- `docs/setup-progetto` — documentazione
 
 ---
 
-## Roadmap
+## Aggiornamento documentazione al commit
 
-| Ordine | Fase | Stato | Branch |
-|---|---|---|---|
-| 1 | Dashboard | 🔄 In programma | feature/dashboard |
-| 2 | Pagina Clienti | ✅ Completata | feature/clienti |
-| 3 | Pagina Lavori | ✅ Completata | feature/lavori |
-| 4 | Pagina Pagamenti | ⏳ Da fare | feature/pagamenti |
-| 5 | Pagina Statistiche | ⏳ Da fare | feature/statistiche |
-| 6 | Pagina Impostazioni | ⏳ Da fare | feature/impostazioni |
-| 7 | Pagina Magazzino | ⏳ Da fare | feature/magazzino |
-| 8 | Database SQLite | ⏳ Da fare | feature/database |
-| 9 | CRUD reali | ⏳ Da fare | feature/crud |
-| 10 | Dashboard dinamica | ⏳ Da fare | feature/dashboard |
-| 11 | Autenticazione | ⏳ Da fare | feature/auth |
+- **README.md** — aggiornare SOLO se la modifica cambia qualcosa di visibile pubblicamente: nuova caratteristica completata (lista "Caratteristiche"), comandi, stack, architettura
+- **CLAUDE.md** — aggiornare SOLO se la modifica introduce un nuovo pattern UI consolidato o un nuovo vincolo tecnico
+- Se uno dei due file viene aggiornato, includerlo nello stesso commit della modifica
+- Lo stato fasi/roadmap NON va documentato qui — è gestito su Notion esternamente
