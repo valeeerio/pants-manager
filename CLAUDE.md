@@ -42,6 +42,30 @@ Contiene SOLO regole operative: come scrivere codice in questo progetto.
 
 ---
 
+## Struttura dei prompt ricevuti
+
+Ogni prompt operativo arriva con questa struttura in 8 sezioni.
+Se un prompt è ambiguo o manca una sezione critica, **chiedere chiarimenti PRIMA di scrivere codice**.
+
+```
+1. CONTESTO      — fase di riferimento e branch su cui lavorare
+2. OBIETTIVO     — risultato atteso della modifica (UNO solo)
+3. FILE DA TOCCARE     — lista esplicita
+4. FILE DA NON TOCCARE — lista esplicita
+5. MOCK DATA     — dati di esempio, se servono
+6. CRITERI DI ACCETTAZIONE — condizioni verificabili che definiscono "fatto"
+7. VERIFICA      — livello di build richiesto (vedi Livelli di verifica)
+8. COMMIT        — presente solo se va committato, con il messaggio già fornito
+```
+
+### Regole di esecuzione del prompt
+- **Primo comando di ogni sessione:** `git branch && git status`. Se il branch attivo non corrisponde al CONTESTO → fare checkout sul branch corretto prima di tutto
+- **Se la sezione COMMIT è assente → NON committare.** Fermarsi dopo la verifica e riportare l'esito
+- **Mai uscire dallo scope:** se durante il lavoro emerge un problema fuori dai file elencati → segnalarlo senza risolverlo
+- **Al termine, riportare sempre:** esito build · lista file modificati · criteri di accettazione soddisfatti o meno
+
+---
+
 ## Palette
 
 ```
