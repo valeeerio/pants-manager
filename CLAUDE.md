@@ -11,20 +11,21 @@ Contiene SOLO regole operative: come scrivere codice in questo progetto.
 ## Vincoli tecnici — LEGGERE PRIMA DI SCRIVERE CODICE
 
 **Progetto:** Gestionale Sartoria · Repository: `pants-manager`
-**Tipo:** App desktop Tauri 2.0 + Next.js 15 + TypeScript + Tailwind + shadcn/ui
+**Tipo:** Web app · Next.js 15 + TypeScript + Tailwind + shadcn/ui + Prisma + PostgreSQL
 
-1. **Next.js è in `static export`** (`output: "export"`)
-   - ❌ NO API Routes (`app/api/`)
-   - ❌ NO Server Components con data fetching
-   - ❌ NO middleware, NO `next/image` con ottimizzazione server
-   - ✅ Solo client components e static generation
+1. **Next.js è una web app standard** (App Router, no `static export`)
+   - ✅ API Routes (`app/api/`) abilitate
+   - ✅ Server Components con data fetching
+   - ✅ `next/image` con ottimizzazione server
+   - ✅ Middleware e tutte le funzionalità Next.js
 
-2. **Il database SQLite NON è ancora collegato**
+2. **Il database PostgreSQL NON è ancora collegato**
    - Tutte le pagine usano mock data statici in file locali
-   - ❌ NON aggiungere chiamate a database, plugin SQL o `invoke()` senza richiesta esplicita
+   - ❌ NON aggiungere chiamate a database o Prisma senza richiesta esplicita
 
-3. **Backend = Tauri** (quando arriverà)
-   - Le operazioni dati passeranno da `invoke()` Tauri, mai da HTTP/fetch
+3. **Backend = API Routes Next.js + Prisma**
+   - Le operazioni dati passeranno da API Routes, mai da `invoke()` Tauri
+   - ❌ NON usare `invoke()` — Tauri è stato rimosso
 
 ---
 
@@ -196,15 +197,12 @@ Annullato          → CANCELLED
 
 ```bash
 npm run dev        # Dev quotidiano nel browser
-npx tauri dev      # Dev con finestra desktop nativa (verifica prima dei commit)
 npm run build      # Verifica build Next.js — OBBLIGATORIA dopo ogni modifica
-npx tauri build    # Build desktop completa + installer .dmg
 ```
 
 ### Livelli di verifica
 - **Modifica UI ordinaria** → `npm run build`
-- **Fine fase / modifica strutturale** (config, layout globale, dipendenze) → `npm run build` + `npx tauri build`
-- **Modifica a `src-tauri/` o `next.config.ts`** → SEMPRE entrambe le build
+- **Fine fase / modifica strutturale** (config, layout globale, dipendenze) → `npm run build`
 
 ---
 
@@ -216,7 +214,6 @@ git branch && git status
 
 # Fine modifica
 npm run build              # sempre
-npx tauri build            # solo se richiesto dal livello di verifica
 
 # Commit (solo se richiesto dal prompt)
 git add <file modificati>
