@@ -65,3 +65,59 @@ export async function GET(
     );
   }
 }
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { nome, cognome, telefono, email, citta, note } = body;
+
+    if (!nome || !cognome || !telefono) {
+      return NextResponse.json(
+        { error: "Nome, cognome e telefono sono obbligatori" },
+        { status: 400 }
+      );
+    }
+
+    const cliente = await prisma.client.update({
+      where: { id },
+      data: {
+        firstName: nome.trim(),
+        lastName: cognome.trim(),
+        phone: telefono.trim(),
+        email: email?.trim() || null,
+        city: citta?.trim() || null,
+        notes: note?.trim() || null,
+      },
+      include: {
+        _count: { select: { projects: true } },
+        projects: { select: { status: true } },
+      },
+    });
+
+    return NextResponse.json({
+      id: cliente.id,
+      nome: cliente.firstName,
+      cognome: cliente.lastName,
+      telefono: cliente.phone,
+      email: cliente.email ?? null,
+      citta: cliente.city ?? null,
+      note: cliente.notes ?? null,
+      dataRegistrazione: cliente.createdAt.toISOString().split("T")[0],
+      numeroLavori: cliente._count.projects,
+      lavoriAttivi: cliente.projects.filter((p) =>
+        ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(p.status)
+      ).length,
+    });
+
+  } catch (error) {
+    console.error("Errore PUT /api/clienti/[id]:", error);
+    return NextResponse.json(
+      { error: "Errore nella modifica del cliente" },
+      { status: 500 }
+    );
+  }
+}

@@ -264,6 +264,7 @@ export default function ClientiPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editErrors, setEditErrors] = useState<FormErrors>(emptyErrors());
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // ── Lavori aggiuntivi (persistono tra sessioni form) ──────────────────────────
   const [lavoriAggiunti] = useState<LavoroStorico[]>([]);
@@ -559,22 +560,46 @@ export default function ClientiPage() {
     return ok;
   }
 
-  function handleEditSubmit() {
+  async function handleEditSubmit() {
     if (!validateEdit() || !selectedCliente) return;
-    const updated: Cliente = {
-      ...selectedCliente,
-      nome: editNome.trim(),
-      cognome: editCognome.trim(),
-      telefono: editTelefono.trim(),
-      citta: editCitta.trim(),
-      email: editEmail.trim() || null,
-      note: editNote.trim() || null,
-    };
-    setClienti((prev) => prev.map((c) => (c.id === selectedCliente.id ? updated : c)));
-    setSelectedCliente(updated);
-    setIsEditOpen(false);
-    resetEditForm();
-    showSuccess("Cliente modificato con successo");
+
+    setIsEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/clienti/${selectedCliente.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: editNome,
+          cognome: editCognome,
+          telefono: editTelefono,
+          email: editEmail || null,
+          citta: editCitta || null,
+          note: editNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella modifica");
+      }
+
+      const clienteAggiornato = await res.json();
+      setClienti((prev) =>
+        prev.map((c) => (c.id === clienteAggiornato.id ? clienteAggiornato : c))
+      );
+      setSelectedCliente(clienteAggiornato);
+      setIsEditOpen(false);
+      resetEditForm();
+      showSuccess("Cliente modificato con successo");
+    } catch (error) {
+      console.error(error);
+      setEditErrors((prev) => ({
+        ...prev,
+        duplicato: error instanceof Error ? error.message : "Errore nella modifica del cliente",
+      }));
+    } finally {
+      setIsEditSubmitting(false);
+    }
   }
 
   // ── Lavori pregressi handlers ─────────────────────────────────────────────────
@@ -1401,9 +1426,10 @@ export default function ClientiPage() {
                 <button
                   type="button"
                   onClick={handleEditSubmit}
-                  className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98]"
+                  disabled={isEditSubmitting}
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Salva modifiche
+                  {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
                 </button>
               </div>
             </div>
