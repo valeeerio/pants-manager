@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -22,6 +23,11 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 export async function GET() {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+  }
+
   try {
     const lavori = await prisma.project.findMany({
       orderBy: { createdAt: "desc" },
@@ -60,6 +66,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+  }
+
   try {
     const body = await req.json();
     const { clientId, type, dueDate, description, estimatedPrice, notes } = body;

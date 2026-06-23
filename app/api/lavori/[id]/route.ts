@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -25,6 +26,11 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+  }
+
   try {
     const { id } = await params;
     const lavoro = await prisma.project.findUnique({
@@ -73,6 +79,11 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+  }
+
   try {
     const { id } = await params;
     const body = await req.json();
@@ -145,6 +156,11 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+  }
+
   try {
     const { id } = await params;
 

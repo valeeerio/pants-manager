@@ -1,11 +1,7 @@
 import { PrismaClient, ProjectType, ProjectStatus, PaymentStatus, PaymentMethod, UserRole } from "@prisma/client";
-import { hash } from "crypto";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
-
-function hashPassword(password: string): string {
-  return hash("sha256", password);
-}
 
 async function main() {
   console.log("Avvio seed...");
@@ -18,11 +14,13 @@ async function main() {
   await prisma.user.deleteMany();
 
   // Utente admin
+  const passwordHash = await bcrypt.hash("gestionalexsimone", 12)
+
   const admin = await prisma.user.create({
     data: {
       name: "Amministratore",
       email: "admin@gestionale.it",
-      passwordHash: hashPassword("admin123"),
+      passwordHash,
       role: UserRole.ADMIN,
     },
   });

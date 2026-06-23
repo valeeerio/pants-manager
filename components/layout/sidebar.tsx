@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   BarChart3,
   BriefcaseBusiness,
   ChevronRight,
   CreditCard,
   LayoutDashboard,
+  LogOut,
   Scissors,
   Settings,
+  User,
   Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +28,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-[#111214] lg:flex">
@@ -92,9 +96,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom footer */}
-      <div className="relative border-t border-white/[0.06] px-4 py-3">
-        <p className="text-[11px] text-white/20">Gestionale Sartoria · v1.0</p>
+      {/* Utente + Logout */}
+      <div className="border-t border-stone-700 pt-4 mt-4">
+        <div className="flex items-center gap-2 px-3 mb-3">
+          <User className="w-4 h-4 text-stone-400 shrink-0" />
+          <span className="text-sm text-stone-400 truncate">
+            {session?.user?.name ?? ""}
+          </span>
+        </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-stone-400 hover:text-white hover:bg-stone-800 transition-colors text-sm"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          Esci
+        </button>
       </div>
     </aside>
   );
