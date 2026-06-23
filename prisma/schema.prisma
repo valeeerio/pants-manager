@@ -3,50 +3,116 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-model Customer {
+model Client {
   id        String   @id @default(cuid())
-  name      String
-  phone     String?
+  firstName String
+  lastName  String
+  phone     String
   email     String?
+  city      String?
+  notes     String?
   createdAt DateTime @default(now())
-  jobs      Job[]
+  updatedAt DateTime @updatedAt
+  projects  Project[]
 }
 
-model Job {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  status      JobStatus @default(PENDING)
-  dueDate     DateTime?
-  amount      Decimal   @db.Decimal(10, 2)
-  customerId  String
-  customer    Customer  @relation(fields: [customerId], references: [id])
-  payments    Payment[]
-  createdAt   DateTime  @default(now())
+model Project {
+  id             String        @id @default(cuid())
+  code           String        @unique
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+  title          String
+  description    String?
+  type           ProjectType
+  status         ProjectStatus @default(TODO)
+  receivedAt     DateTime      @default(now())
+  dueDate        DateTime?
+  estimatedPrice Float?
+  finalPrice     Float?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  payments       Payment[]
+  images         ProjectImage[]
 }
 
 model Payment {
   id        String        @id @default(cuid())
-  amount    Decimal       @db.Decimal(10, 2)
-  method    PaymentMethod
-  paidAt    DateTime      @default(now())
-  jobId     String
-  job       Job           @relation(fields: [jobId], references: [id])
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id])
+  amount    Float
+  status    PaymentStatus @default(UNPAID)
+  method    PaymentMethod?
+  paidAt    DateTime?
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
-enum JobStatus {
-  PENDING
+model ProjectImage {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id])
+  data      String
+  type      ImageType
+  createdAt DateTime    @default(now())
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum ProjectStatus {
+  TODO
   IN_PROGRESS
-  READY
+  WAITING_CUSTOMER
+  COMPLETED
   DELIVERED
+  CANCELLED
+}
+
+enum ProjectType {
+  HEM
+  WAIST_TIGHTENING
+  LEG_SHORTENING
+  LEG_WIDENING
+  ZIP_REPLACEMENT
+  REPAIR
+  CUSTOM
+  OTHER
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT_PAID
+  PAID
 }
 
 enum PaymentMethod {
   CASH
   CARD
-  TRANSFER
+  BANK_TRANSFER
+  OTHER
+}
+
+enum ImageType {
+  BEFORE
+  AFTER
+  DETAIL
+}
+
+enum UserRole {
+  ADMIN
+  USER
 }

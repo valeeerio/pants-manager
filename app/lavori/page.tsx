@@ -34,254 +34,27 @@ type JobPhotos = {
   dopo: string | null;
 };
 
+type Cliente = { id: string; nome: string; cognome: string };
+
 type Job = {
-  id: number;
+  id: string;
   code: string;
   clientName: string;
-  title: string;
+  clientId?: string;
+  title?: string;
   type: string;
+  typeRaw?: string;
   status: string;
-  receivedDate: string;
-  dueDate: string;
-  estimatedPrice: number;
+  statusRaw?: string;
+  receivedAt: string;
+  dueDate: string | null;
+  estimatedPrice: number | null;
   finalPrice: number | null;
-  description: string;
+  description: string | null;
   notes: string | null;
   photos?: JobPhotos;
 };
 
-const allJobs: Job[] = [
-  {
-    id: 1,
-    code: "GS-001",
-    clientName: "Mario Rossi",
-    title: "Orlo pantalone elegante",
-    type: "Orlo pantalone",
-    status: "In lavorazione",
-    receivedDate: "2025-05-08",
-    dueDate: "2025-05-10",
-    estimatedPrice: 15,
-    finalPrice: null,
-    description: "Orlo pantalone in lana nera",
-    notes: "Cliente preferisce orlo a mano",
-  },
-  {
-    id: 2,
-    code: "GS-002",
-    clientName: "Luca Bianchi",
-    title: "Stringere vita jeans",
-    type: "Stringere vita",
-    status: "Pronto",
-    receivedDate: "2025-05-07",
-    dueDate: "2025-05-10",
-    estimatedPrice: 20,
-    finalPrice: 20,
-    description: "Stringere vita jeans blu",
-    notes: null,
-  },
-  {
-    id: 3,
-    code: "GS-003",
-    clientName: "Anna Verdi",
-    title: "Sostituzione zip",
-    type: "Sostituzione zip",
-    status: "In attesa cliente",
-    receivedDate: "2025-05-06",
-    dueDate: "2025-05-12",
-    estimatedPrice: 18,
-    finalPrice: null,
-    description: "Sostituire zip pantaloni casual",
-    notes: "Manca zip, cliente la porta dopo",
-  },
-  {
-    id: 4,
-    code: "GS-004",
-    clientName: "Giuseppe Neri",
-    title: "Accorciare pantalone",
-    type: "Accorciare gamba",
-    status: "Da iniziare",
-    receivedDate: "2025-05-09",
-    dueDate: "2025-05-15",
-    estimatedPrice: 12,
-    finalPrice: null,
-    description: "Accorciare pantalone di 4 cm",
-    notes: null,
-  },
-  {
-    id: 5,
-    code: "GS-005",
-    clientName: "Francesca Conti",
-    title: "Riparazione strappo interno",
-    type: "Riparazione strappo",
-    status: "Consegnato",
-    receivedDate: "2025-04-28",
-    dueDate: "2025-05-05",
-    estimatedPrice: 22,
-    finalPrice: 22,
-    description: "Riparare strappo coscia interna",
-    notes: "Consegnato il 05/05",
-  },
-  {
-    id: 6,
-    code: "GS-006",
-    clientName: "Roberto Ferrara",
-    title: "Pantalone su misura",
-    type: "Pantalone su misura",
-    status: "In lavorazione",
-    receivedDate: "2025-04-20",
-    dueDate: "2025-05-25",
-    estimatedPrice: 85,
-    finalPrice: null,
-    description: "Pantalone completo su misura in lana grigia",
-    notes: "3 prove previste",
-  },
-  {
-    id: 7,
-    code: "GS-007",
-    clientName: "Mario Rossi",
-    title: "Allargare fianchi",
-    type: "Allargare pantalone",
-    status: "Da iniziare",
-    receivedDate: "2025-05-09",
-    dueDate: "2025-05-20",
-    estimatedPrice: 25,
-    finalPrice: null,
-    description: "Allargare fianchi di 3 cm",
-    notes: null,
-  },
-  {
-    id: 8,
-    code: "GS-008",
-    clientName: "Luca Bianchi",
-    title: "Orlo pantalone da cerimonia",
-    type: "Orlo pantalone",
-    status: "Annullato",
-    receivedDate: "2025-04-15",
-    dueDate: "2025-05-05",
-    estimatedPrice: 30,
-    finalPrice: null,
-    description: "Orlo pantalone da cerimonia in seta",
-    notes: "Annullato: cliente ha trovato sartoria diversa",
-  },
-  {
-    id: 9,
-    code: "GS-009",
-    clientName: "Anna Verdi",
-    title: "Modificare vita e accorciare",
-    type: "Stringere vita",
-    status: "Pronto",
-    receivedDate: "2025-05-04",
-    dueDate: "2025-05-09",
-    estimatedPrice: 28,
-    finalPrice: 28,
-    description: "Stringere vita e accorciare gamba",
-    notes: "Cliente è regolare",
-  },
-  {
-    id: 10,
-    code: "GS-010",
-    clientName: "Giuseppe Neri",
-    title: "Riparazione tasca",
-    type: "Riparazione strappo",
-    status: "Pronto",
-    receivedDate: "2025-05-08",
-    dueDate: "2025-05-11",
-    estimatedPrice: 16,
-    finalPrice: 16,
-    description: "Riparare tasca posteriore strappata",
-    notes: null,
-  },
-  {
-    id: 11,
-    code: "GS-011",
-    clientName: "Francesca Conti",
-    title: "Accorciare gamba destra",
-    type: "Accorciare gamba",
-    status: "Da iniziare",
-    receivedDate: "2025-05-09",
-    dueDate: "2025-05-18",
-    estimatedPrice: 14,
-    finalPrice: null,
-    description: "Accorciare solo gamba destra di 3 cm",
-    notes: "Asimmetria segnalata dal cliente",
-  },
-  {
-    id: 12,
-    code: "GS-012",
-    clientName: "Roberto Ferrara",
-    title: "Orlo jeans doppio",
-    type: "Orlo pantalone",
-    status: "In lavorazione",
-    receivedDate: "2025-05-08",
-    dueDate: "2025-05-13",
-    estimatedPrice: 18,
-    finalPrice: null,
-    description: "Orlo doppio jeans scuro",
-    notes: null,
-  },
-  {
-    id: 13,
-    code: "GS-013",
-    clientName: "Mario Rossi",
-    title: "Sostituzione zip laterale",
-    type: "Sostituzione zip",
-    status: "In attesa cliente",
-    receivedDate: "2025-05-07",
-    dueDate: "2025-05-14",
-    estimatedPrice: 20,
-    finalPrice: null,
-    description: "Zip laterale rotta su pantalone elegante",
-    notes: "Cliente deve scegliere colore zip",
-  },
-  {
-    id: 14,
-    code: "GS-014",
-    clientName: "Anna Verdi",
-    title: "Riparazione fodera interna",
-    type: "Riparazione strappo",
-    status: "Pronto",
-    receivedDate: "2025-05-05",
-    dueDate: "2025-05-10",
-    estimatedPrice: 24,
-    finalPrice: 24,
-    description: "Fodera interna scucita su pantalone invernale",
-    notes: null,
-  },
-  {
-    id: 15,
-    code: "GS-015",
-    clientName: "Giuseppe Neri",
-    title: "Stringere fondo gamba",
-    type: "Altro",
-    status: "Da iniziare",
-    receivedDate: "2025-05-10",
-    dueDate: "2025-05-22",
-    estimatedPrice: 16,
-    finalPrice: null,
-    description: "Stringere il fondo di entrambe le gambe",
-    notes: "Stile slim richiesto dal cliente",
-  },
-];
-
-const CLIENTI = [
-  "Mario Rossi",
-  "Luca Bianchi",
-  "Anna Verdi",
-  "Giuseppe Neri",
-  "Francesca Conti",
-  "Roberto Ferrara",
-];
-
-const TIPI_LAVORO = [
-  "Orlo pantalone",
-  "Stringere vita",
-  "Accorciare gamba",
-  "Allargare pantalone",
-  "Sostituzione zip",
-  "Riparazione strappo",
-  "Pantalone su misura",
-  "Altro",
-];
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
@@ -368,7 +141,9 @@ function localDateStr(date: Date): string {
 
 export default function JobsPage() {
   // List state (mutable for delete / status change)
-  const [jobs, setJobs] = useState<Job[]>(allJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter + sort
   const [searchQuery, setSearchQuery] = useState("");
@@ -394,9 +169,12 @@ export default function JobsPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   // Foto Prima / Dopo — per sessione, lettura base64 in memoria
-  const [jobPhotos, setJobPhotos] = useState<Record<number, JobPhotos>>({});
+  const [jobPhotos, setJobPhotos] = useState<Record<string, JobPhotos>>({});
   const inputPrimaRef = useRef<HTMLInputElement>(null);
   const inputDopoRef = useRef<HTMLInputElement>(null);
+
+  // Clienti disponibili (da API)
+  const [clientiDisponibili, setClientiDisponibili] = useState<Cliente[]>([]);
 
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -432,6 +210,32 @@ export default function JobsPage() {
     setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    async function caricaDati() {
+      try {
+        setLoading(true);
+        const [resLavori, resClienti] = await Promise.all([
+          fetch("/api/lavori"),
+          fetch("/api/clienti"),
+        ]);
+        if (!resLavori.ok) throw new Error("Errore nel caricamento lavori");
+        if (!resClienti.ok) throw new Error("Errore nel caricamento clienti");
+        const [lavori, clienti] = await Promise.all([
+          resLavori.json(),
+          resClienti.json(),
+        ]);
+        setJobs(lavori);
+        setClientiDisponibili(clienti);
+      } catch (err) {
+        console.error(err);
+        setError("Impossibile caricare i dati. Riprova.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    caricaDati();
+  }, []);
+
   const filteredAndSorted = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -465,7 +269,7 @@ export default function JobsPage() {
         weekEnd.setDate(weekEnd.getDate() + 7);
         const weekEndStr = localDateStr(weekEnd);
         result = result.filter(
-          (j) => j.dueDate >= todayStr && j.dueDate <= weekEndStr
+          (j) => j.dueDate != null && j.dueDate >= todayStr && j.dueDate <= weekEndStr
         );
       } else if (filterDueDate === "month") {
         const monthStart = localDateStr(
@@ -475,13 +279,13 @@ export default function JobsPage() {
           new Date(now.getFullYear(), now.getMonth() + 1, 0)
         );
         result = result.filter(
-          (j) => j.dueDate >= monthStart && j.dueDate <= monthEnd
+          (j) => j.dueDate != null && j.dueDate >= monthStart && j.dueDate <= monthEnd
         );
       } else if (filterDueDate === "overdue") {
-        result = result.filter((j) => j.dueDate < todayStr);
+        result = result.filter((j) => j.dueDate != null && j.dueDate < todayStr);
       } else if (filterDueDate === "custom") {
-        if (dateFrom) result = result.filter((j) => j.dueDate >= dateFrom);
-        if (dateTo) result = result.filter((j) => j.dueDate <= dateTo);
+        if (dateFrom) result = result.filter((j) => j.dueDate != null && j.dueDate >= dateFrom);
+        if (dateTo) result = result.filter((j) => j.dueDate != null && j.dueDate <= dateTo);
       }
     }
 
@@ -548,39 +352,45 @@ export default function JobsPage() {
     return valid;
   }
 
-  function handleNewSubmit() {
+  async function handleNewSubmit() {
     if (!validateNewForm()) return;
     setIsSubmitting(true);
-    const newId = jobs.length + 1;
-    const nuovoLavoro: Job = {
-      id: newId,
-      code: `GS-${String(newId).padStart(3, "0")}`,
-      clientName: newCliente,
-      title: newTipoLavoro,
-      type: newTipoLavoro,
-      status: "Da iniziare",
-      receivedDate: localDateStr(new Date()),
-      dueDate: newDataConsegna,
-      estimatedPrice: parseFloat(newPrezzoStimato) || 0,
-      finalPrice: null,
-      description: newDescrizione || "",
-      notes: newNote || null,
-    };
-    setTimeout(() => {
-      setJobs((prev) => [...prev, nuovoLavoro]);
-      setIsSubmitting(false);
+    try {
+      const res = await fetch("/api/lavori", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: newCliente,
+          type: newTipoLavoro,
+          dueDate: newDataConsegna,
+          description: newDescrizione || null,
+          estimatedPrice: newPrezzoStimato || null,
+          notes: newNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella creazione");
+      }
+
+      const lavoroCreato = await res.json();
+      setJobs((prev) => [lavoroCreato, ...prev]);
       setIsNewModalOpen(false);
       resetNewForm();
       setSuccessMessage("Lavoro creato con successo!");
       setShowSuccessBanner(true);
-      setTimeout(() => setShowSuccessBanner(false), 3000);
-    }, 500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function openEditModal(lavoro: Job) {
-    setEditCliente(lavoro.clientName);
-    setEditTipoLavoro(lavoro.type);
-    setEditDataConsegna(lavoro.dueDate);
+    setEditCliente(lavoro.clientId ?? "");
+    setEditTipoLavoro(lavoro.typeRaw ?? "");
+    setEditDataConsegna(lavoro.dueDate ?? "");
     setEditDescrizione(lavoro.description || "");
     setEditPrezzoStimato(lavoro.estimatedPrice?.toString() || "");
     setEditNote(lavoro.notes || "");
@@ -612,33 +422,43 @@ export default function JobsPage() {
     return valid;
   }
 
-  function handleEditSubmit() {
+  async function handleEditSubmit() {
     if (!validateEditForm()) return;
     setIsEditSubmitting(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`/api/lavori/${selectedLavoro!.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: editCliente,
+          type: editTipoLavoro,
+          status: selectedLavoro!.statusRaw ?? "TODO",
+          dueDate: editDataConsegna || null,
+          description: editDescrizione || null,
+          estimatedPrice: editPrezzoStimato || null,
+          finalPrice: null,
+          notes: editNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella modifica");
+      }
+
+      const lavoroAggiornato = await res.json();
       setJobs((prev) =>
-        prev.map((j) =>
-          j.id === selectedLavoro!.id
-            ? {
-                ...j,
-                clientName: editCliente,
-                title: editTipoLavoro,
-                type: editTipoLavoro,
-                dueDate: editDataConsegna,
-                description: editDescrizione || "",
-                estimatedPrice: parseFloat(editPrezzoStimato) || 0,
-                notes: editNote || null,
-              }
-            : j
-        )
+        prev.map((j) => (j.id === lavoroAggiornato.id ? lavoroAggiornato : j))
       );
-      setIsEditSubmitting(false);
       setIsEditModalOpen(false);
       resetEditForm();
       setSuccessMessage("Lavoro modificato con successo!");
       setShowSuccessBanner(true);
-      setTimeout(() => setShowSuccessBanner(false), 3000);
-    }, 500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsEditSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -695,17 +515,30 @@ export default function JobsPage() {
     setShowStatusChange(false);
   }
 
-  function deleteLavoro() {
+  async function deleteLavoro() {
     if (!selectedLavoro) return;
-    setJobs((prev) => prev.filter((j) => j.id !== selectedLavoro.id));
-    setShowDeleteConfirm(false);
-    setIsModalOpen(false);
-    setSelectedLavoro(null);
+    try {
+      const res = await fetch(`/api/lavori/${selectedLavoro.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'eliminazione");
+      }
+
+      setJobs((prev) => prev.filter((j) => j.id !== selectedLavoro.id));
+      setShowDeleteConfirm(false);
+      setIsModalOpen(false);
+      setSelectedLavoro(null);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   function handleFileSelected(
     e: React.ChangeEvent<HTMLInputElement>,
-    jobId: number,
+    jobId: string,
     slot: "prima" | "dopo"
   ) {
     const file = e.target.files?.[0];
@@ -731,7 +564,7 @@ export default function JobsPage() {
     else inputDopoRef.current?.click();
   }
 
-  function handleRemovePhoto(jobId: number, slot: "prima" | "dopo") {
+  function handleRemovePhoto(jobId: string, slot: "prima" | "dopo") {
     setJobPhotos((prev) => ({
       ...prev,
       [jobId]: {
@@ -973,7 +806,21 @@ export default function JobsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleJobs.map((job) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-16 text-center text-slate-400">
+                    <p className="text-sm">Caricamento lavori...</p>
+                  </TableCell>
+                </TableRow>
+              )}
+              {error && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-16 text-center">
+                    <p className="text-sm text-red-500">{error}</p>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && visibleJobs.map((job) => (
                 <TableRow
                   key={job.code}
                   className="cursor-pointer hover:bg-amber-50"
@@ -996,11 +843,11 @@ export default function JobsPage() {
                   </TableCell>
                   <TableCell className="text-slate-600">{job.dueDate}</TableCell>
                   <TableCell className="text-right font-medium">
-                    € {job.estimatedPrice}
+                    {job.estimatedPrice != null ? `€ ${job.estimatedPrice}` : "—"}
                   </TableCell>
                 </TableRow>
               ))}
-              {visibleJobs.length === 0 && (
+              {!loading && !error && visibleJobs.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -1076,7 +923,7 @@ export default function JobsPage() {
                 <Field label="Tipo lavoro" value={selectedLavoro.type} />
                 <Field
                   label="Data ricezione"
-                  value={selectedLavoro.receivedDate}
+                  value={selectedLavoro.receivedAt}
                 />
                 <Field
                   label="Data consegna"
@@ -1084,7 +931,7 @@ export default function JobsPage() {
                 />
                 <Field
                   label="Prezzo stimato"
-                  value={`€ ${selectedLavoro.estimatedPrice}`}
+                  value={selectedLavoro.estimatedPrice != null ? `€ ${selectedLavoro.estimatedPrice}` : null}
                 />
                 <Field
                   label="Prezzo finale"
@@ -1333,8 +1180,8 @@ export default function JobsPage() {
                   className={newErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona un cliente</option>
-                  {CLIENTI.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {clientiDisponibili.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
                   ))}
                 </select>
                 {newErrors.cliente && (
@@ -1353,9 +1200,14 @@ export default function JobsPage() {
                   className={newErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona tipo lavoro</option>
-                  {TIPI_LAVORO.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  <option value="HEM">Orlo pantalone</option>
+                  <option value="WAIST_TIGHTENING">Stringere vita</option>
+                  <option value="LEG_SHORTENING">Accorciare gamba</option>
+                  <option value="LEG_WIDENING">Allargare pantalone</option>
+                  <option value="ZIP_REPLACEMENT">Sostituzione zip</option>
+                  <option value="REPAIR">Riparazione</option>
+                  <option value="CUSTOM">Su misura</option>
+                  <option value="OTHER">Altro</option>
                 </select>
                 {newErrors.tipoLavoro && (
                   <p className="mt-1 text-sm text-red-500">{newErrors.tipoLavoro}</p>
@@ -1488,8 +1340,8 @@ export default function JobsPage() {
                   className={editErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona un cliente</option>
-                  {CLIENTI.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {clientiDisponibili.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
                   ))}
                 </select>
                 {editErrors.cliente && (
@@ -1508,9 +1360,14 @@ export default function JobsPage() {
                   className={editErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona tipo lavoro</option>
-                  {TIPI_LAVORO.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  <option value="HEM">Orlo pantalone</option>
+                  <option value="WAIST_TIGHTENING">Stringere vita</option>
+                  <option value="LEG_SHORTENING">Accorciare gamba</option>
+                  <option value="LEG_WIDENING">Allargare pantalone</option>
+                  <option value="ZIP_REPLACEMENT">Sostituzione zip</option>
+                  <option value="REPAIR">Riparazione</option>
+                  <option value="CUSTOM">Su misura</option>
+                  <option value="OTHER">Altro</option>
                 </select>
                 {editErrors.tipoLavoro && (
                   <p className="mt-1 text-sm text-red-500">{editErrors.tipoLavoro}</p>
