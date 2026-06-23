@@ -515,12 +515,25 @@ export default function JobsPage() {
     setShowStatusChange(false);
   }
 
-  function deleteLavoro() {
+  async function deleteLavoro() {
     if (!selectedLavoro) return;
-    setJobs((prev) => prev.filter((j) => j.id !== selectedLavoro.id));
-    setShowDeleteConfirm(false);
-    setIsModalOpen(false);
-    setSelectedLavoro(null);
+    try {
+      const res = await fetch(`/api/lavori/${selectedLavoro.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'eliminazione");
+      }
+
+      setJobs((prev) => prev.filter((j) => j.id !== selectedLavoro.id));
+      setShowDeleteConfirm(false);
+      setIsModalOpen(false);
+      setSelectedLavoro(null);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   function handleFileSelected(

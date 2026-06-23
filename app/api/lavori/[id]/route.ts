@@ -140,3 +140,24 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    await prisma.payment.deleteMany({ where: { projectId: id } });
+    await prisma.projectImage.deleteMany({ where: { projectId: id } });
+    await prisma.project.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Errore DELETE /api/lavori/[id]:", error);
+    return NextResponse.json(
+      { error: "Errore nell'eliminazione del lavoro" },
+      { status: 500 }
+    );
+  }
+}
