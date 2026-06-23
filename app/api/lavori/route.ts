@@ -58,3 +58,66 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { clientId, type, dueDate, description, estimatedPrice, notes } = body;
+
+    if (!clientId || !type || !dueDate) {
+      return NextResponse.json(
+        { error: "Cliente, tipo lavoro e data consegna sono obbligatori" },
+        { status: 400 }
+      );
+    }
+
+    const count = await prisma.project.count();
+    const code = `GS-${String(count + 1).padStart(3, "0")}`;
+    const titoloAuto = TYPE_MAP[type] ?? "Lavoro";
+
+    const lavoro = await prisma.project.create({
+      data: {
+        code,
+        clientId,
+        title: titoloAuto,
+        description: description?.trim() || null,
+        type,
+        status: "TODO",
+        dueDate: new Date(dueDate),
+        estimatedPrice: estimatedPrice ? parseFloat(estimatedPrice) : null,
+        notes: notes?.trim() || null,
+      },
+      include: {
+        client: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        id: lavoro.id,
+        code: lavoro.code,
+        clientName: `${lavoro.client.firstName} ${lavoro.client.lastName}`,
+        clientId: lavoro.clientId,
+        type: TYPE_MAP[lavoro.type] ?? lavoro.type,
+        typeRaw: lavoro.type,
+        status: STATUS_MAP[lavoro.status] ?? lavoro.status,
+        statusRaw: lavoro.status,
+        receivedAt: lavoro.receivedAt.toISOString().split("T")[0],
+        dueDate: lavoro.dueDate?.toISOString().split("T")[0] ?? null,
+        estimatedPrice: lavoro.estimatedPrice ?? null,
+        finalPrice: lavoro.finalPrice ?? null,
+        notes: lavoro.notes ?? null,
+        description: lavoro.description ?? null,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Errore POST /api/lavori:", error);
+    return NextResponse.json(
+      { error: "Errore nella creazione del lavoro" },
+      { status: 500 }
+    );
+  }
+}

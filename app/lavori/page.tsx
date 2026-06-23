@@ -34,6 +34,8 @@ type JobPhotos = {
   dopo: string | null;
 };
 
+type Cliente = { id: string; nome: string; cognome: string };
+
 type Job = {
   id: string;
   code: string;
@@ -190,6 +192,9 @@ export default function JobsPage() {
   const inputPrimaRef = useRef<HTMLInputElement>(null);
   const inputDopoRef = useRef<HTMLInputElement>(null);
 
+  // Clienti disponibili (da API)
+  const [clientiDisponibili, setClientiDisponibili] = useState<Cliente[]>([]);
+
   // Modal nuovo lavoro
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState("");
@@ -225,21 +230,29 @@ export default function JobsPage() {
   }, []);
 
   useEffect(() => {
-    async function caricaLavori() {
+    async function caricaDati() {
       try {
         setLoading(true);
-        const res = await fetch("/api/lavori");
-        if (!res.ok) throw new Error("Errore nel caricamento lavori");
-        const data = await res.json();
-        setJobs(data);
+        const [resLavori, resClienti] = await Promise.all([
+          fetch("/api/lavori"),
+          fetch("/api/clienti"),
+        ]);
+        if (!resLavori.ok) throw new Error("Errore nel caricamento lavori");
+        if (!resClienti.ok) throw new Error("Errore nel caricamento clienti");
+        const [lavori, clienti] = await Promise.all([
+          resLavori.json(),
+          resClienti.json(),
+        ]);
+        setJobs(lavori);
+        setClientiDisponibili(clienti);
       } catch (err) {
         console.error(err);
-        setError("Impossibile caricare i lavori. Riprova.");
+        setError("Impossibile caricare i dati. Riprova.");
       } finally {
         setLoading(false);
       }
     }
-    caricaLavori();
+    caricaDati();
   }, []);
 
   const filteredAndSorted = useMemo(() => {
@@ -358,33 +371,39 @@ export default function JobsPage() {
     return valid;
   }
 
-  function handleNewSubmit() {
+  async function handleNewSubmit() {
     if (!validateNewForm()) return;
     setIsSubmitting(true);
-    const newId = jobs.length + 1;
-    const nuovoLavoro: Job = {
-      id: String(newId),
-      code: `GS-${String(newId).padStart(3, "0")}`,
-      clientName: newCliente,
-      title: newTipoLavoro,
-      type: newTipoLavoro,
-      status: "Da iniziare",
-      receivedAt: localDateStr(new Date()),
-      dueDate: newDataConsegna,
-      estimatedPrice: parseFloat(newPrezzoStimato) || 0,
-      finalPrice: null,
-      description: newDescrizione || "",
-      notes: newNote || null,
-    };
-    setTimeout(() => {
-      setJobs((prev) => [...prev, nuovoLavoro]);
-      setIsSubmitting(false);
+    try {
+      const res = await fetch("/api/lavori", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: newCliente,
+          type: newTipoLavoro,
+          dueDate: newDataConsegna,
+          description: newDescrizione || null,
+          estimatedPrice: newPrezzoStimato || null,
+          notes: newNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella creazione");
+      }
+
+      const lavoroCreato = await res.json();
+      setJobs((prev) => [lavoroCreato, ...prev]);
       setIsNewModalOpen(false);
       resetNewForm();
       setSuccessMessage("Lavoro creato con successo!");
       setShowSuccessBanner(true);
-      setTimeout(() => setShowSuccessBanner(false), 3000);
-    }, 500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function openEditModal(lavoro: Job) {
@@ -1157,8 +1176,8 @@ export default function JobsPage() {
                   className={newErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona un cliente</option>
-                  {CLIENTI.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {clientiDisponibili.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
                   ))}
                 </select>
                 {newErrors.cliente && (
@@ -1177,9 +1196,14 @@ export default function JobsPage() {
                   className={newErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona tipo lavoro</option>
-                  {TIPI_LAVORO.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  <option value="HEM">Orlo pantalone</option>
+                  <option value="WAIST_TIGHTENING">Stringere vita</option>
+                  <option value="LEG_SHORTENING">Accorciare gamba</option>
+                  <option value="LEG_WIDENING">Allargare pantalone</option>
+                  <option value="ZIP_REPLACEMENT">Sostituzione zip</option>
+                  <option value="REPAIR">Riparazione</option>
+                  <option value="CUSTOM">Su misura</option>
+                  <option value="OTHER">Altro</option>
                 </select>
                 {newErrors.tipoLavoro && (
                   <p className="mt-1 text-sm text-red-500">{newErrors.tipoLavoro}</p>
