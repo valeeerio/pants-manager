@@ -121,3 +121,43 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const lavoriAttivi = await prisma.project.count({
+      where: {
+        clientId: id,
+        status: {
+          in: ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"],
+        },
+      },
+    });
+
+    if (lavoriAttivi > 0) {
+      return NextResponse.json(
+        {
+          error: `Impossibile eliminare: il cliente ha ${lavoriAttivi} lavori attivi in corso.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    await prisma.client.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error("Errore DELETE /api/clienti/[id]:", error);
+    return NextResponse.json(
+      { error: "Errore nell'eliminazione del cliente" },
+      { status: 500 }
+    );
+  }
+}

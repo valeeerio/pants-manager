@@ -655,12 +655,27 @@ export default function ClientiPage() {
     setIsDeleteOpen(true);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!selectedCliente) return;
-    setClienti((prev) => prev.filter((c) => c.id !== selectedCliente.id));
-    setIsDeleteOpen(false);
-    setSelectedCliente(null);
-    showSuccess("Cliente eliminato");
+
+    try {
+      const res = await fetch(`/api/clienti/${selectedCliente.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'eliminazione");
+      }
+
+      setClienti((prev) => prev.filter((c) => c.id !== selectedCliente.id));
+      setIsDeleteOpen(false);
+      setSelectedCliente(null);
+      showSuccess("Cliente eliminato");
+    } catch (error) {
+      console.error(error);
+      alert((error as Error).message);
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
