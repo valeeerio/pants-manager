@@ -55,25 +55,6 @@ type Job = {
   photos?: JobPhotos;
 };
 
-const CLIENTI = [
-  "Mario Rossi",
-  "Luca Bianchi",
-  "Anna Verdi",
-  "Giuseppe Neri",
-  "Francesca Conti",
-  "Roberto Ferrara",
-];
-
-const TIPI_LAVORO = [
-  "Orlo pantalone",
-  "Stringere vita",
-  "Accorciare gamba",
-  "Allargare pantalone",
-  "Sostituzione zip",
-  "Riparazione strappo",
-  "Pantalone su misura",
-  "Altro",
-];
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
@@ -407,8 +388,8 @@ export default function JobsPage() {
   }
 
   function openEditModal(lavoro: Job) {
-    setEditCliente(lavoro.clientName);
-    setEditTipoLavoro(lavoro.type);
+    setEditCliente(lavoro.clientId ?? "");
+    setEditTipoLavoro(lavoro.typeRaw ?? "");
     setEditDataConsegna(lavoro.dueDate ?? "");
     setEditDescrizione(lavoro.description || "");
     setEditPrezzoStimato(lavoro.estimatedPrice?.toString() || "");
@@ -441,33 +422,43 @@ export default function JobsPage() {
     return valid;
   }
 
-  function handleEditSubmit() {
+  async function handleEditSubmit() {
     if (!validateEditForm()) return;
     setIsEditSubmitting(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`/api/lavori/${selectedLavoro!.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: editCliente,
+          type: editTipoLavoro,
+          status: selectedLavoro!.statusRaw ?? "TODO",
+          dueDate: editDataConsegna || null,
+          description: editDescrizione || null,
+          estimatedPrice: editPrezzoStimato || null,
+          finalPrice: null,
+          notes: editNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella modifica");
+      }
+
+      const lavoroAggiornato = await res.json();
       setJobs((prev) =>
-        prev.map((j) =>
-          j.id === selectedLavoro!.id
-            ? {
-                ...j,
-                clientName: editCliente,
-                title: editTipoLavoro,
-                type: editTipoLavoro,
-                dueDate: editDataConsegna,
-                description: editDescrizione || "",
-                estimatedPrice: parseFloat(editPrezzoStimato) || 0,
-                notes: editNote || null,
-              }
-            : j
-        )
+        prev.map((j) => (j.id === lavoroAggiornato.id ? lavoroAggiornato : j))
       );
-      setIsEditSubmitting(false);
       setIsEditModalOpen(false);
       resetEditForm();
       setSuccessMessage("Lavoro modificato con successo!");
       setShowSuccessBanner(true);
-      setTimeout(() => setShowSuccessBanner(false), 3000);
-    }, 500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsEditSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -1336,8 +1327,8 @@ export default function JobsPage() {
                   className={editErrors.cliente ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona un cliente</option>
-                  {CLIENTI.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {clientiDisponibili.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
                   ))}
                 </select>
                 {editErrors.cliente && (
@@ -1356,9 +1347,14 @@ export default function JobsPage() {
                   className={editErrors.tipoLavoro ? FIELD_ERROR_CLASS : FIELD_CLASS}
                 >
                   <option value="">Seleziona tipo lavoro</option>
-                  {TIPI_LAVORO.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  <option value="HEM">Orlo pantalone</option>
+                  <option value="WAIST_TIGHTENING">Stringere vita</option>
+                  <option value="LEG_SHORTENING">Accorciare gamba</option>
+                  <option value="LEG_WIDENING">Allargare pantalone</option>
+                  <option value="ZIP_REPLACEMENT">Sostituzione zip</option>
+                  <option value="REPAIR">Riparazione</option>
+                  <option value="CUSTOM">Su misura</option>
+                  <option value="OTHER">Altro</option>
                 </select>
                 {editErrors.tipoLavoro && (
                   <p className="mt-1 text-sm text-red-500">{editErrors.tipoLavoro}</p>
