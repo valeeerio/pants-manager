@@ -97,11 +97,6 @@ function formatDataIt(iso: string): string {
   return `${d} ${MESI_IT[m - 1]} ${y}`;
 }
 
-function todayISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 function emptyErrors(): FormErrors {
   return { nome: "", cognome: "", telefono: "", citta: "", email: "", duplicato: "" };
 }
@@ -256,6 +251,7 @@ export default function ClientiPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newNote, setNewNote] = useState("");
   const [newErrors, setNewErrors] = useState<FormErrors>(emptyErrors());
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLavoriOpen, setIsLavoriOpen] = useState(false);
   const [newLavori, setNewLavori] = useState<LavoroForm[]>([]);
   const lavoroCounter = useRef(0);
@@ -270,7 +266,7 @@ export default function ClientiPage() {
   const [editErrors, setEditErrors] = useState<FormErrors>(emptyErrors());
 
   // ── Lavori aggiuntivi (persistono tra sessioni form) ──────────────────────────
-  const [lavoriAggiunti, setLavoriAggiunti] = useState<LavoroStorico[]>([]);
+  const [lavoriAggiunti] = useState<LavoroStorico[]>([]);
 
   // ── Effects ───────────────────────────────────────────────────────────────────
 
@@ -468,44 +464,43 @@ export default function ClientiPage() {
     return ok;
   }
 
-  function handleNewSubmit() {
+  async function handleNewSubmit() {
     if (!validateNew()) return;
-    const maxId = clienti.reduce((max, c) => {
-      const n = parseInt(c.id.split("-")[1], 10);
-      return n > max ? n : max;
-    }, 0);
-    const nuovoId = `CL-${String(maxId + 1).padStart(3, "0")}`;
-    const attivi = newLavori.filter(
-      (l) => l.stato === "In lavorazione" || l.stato === "In attesa cliente" || l.stato === "Pronto"
-    ).length;
-    const nuovoCliente: Cliente = {
-      id: nuovoId,
-      nome: newNome.trim(),
-      cognome: newCognome.trim(),
-      telefono: newTelefono.trim(),
-      citta: newCitta.trim(),
-      email: newEmail.trim() || null,
-      note: newNote.trim() || null,
-      dataRegistrazione: todayISO(),
-      numeroLavori: newLavori.length,
-      lavoriAttivi: attivi,
-    };
-    setClienti((prev) => [...prev, nuovoCliente]);
-    if (newLavori.length > 0) {
-      const entries: LavoroStorico[] = newLavori.map((lav, i) => ({
-        id: `GSL-NEW-${Date.now()}-${i}`,
-        codiceLavoro: lav.codiceLavoro,
-        clienteId: nuovoId,
-        tipoLavoro: lav.tipoLavoro,
-        stato: lav.stato,
-        dataConsegna: lav.dataConsegna,
-        prezzo: parseFloat(lav.prezzo),
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/clienti", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: newNome,
+          cognome: newCognome,
+          telefono: newTelefono,
+          email: newEmail || null,
+          citta: newCitta || null,
+          note: newNote || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella creazione");
+      }
+
+      const clienteCreato = await res.json();
+      setClienti((prev) => [clienteCreato, ...prev]);
+      setIsNewOpen(false);
+      resetNewForm();
+      showSuccess("Cliente aggiunto con successo");
+    } catch (error) {
+      console.error(error);
+      setNewErrors((prev) => ({
+        ...prev,
+        duplicato: error instanceof Error ? error.message : "Errore nella creazione del cliente",
       }));
-      setLavoriAggiunti((prev) => [...prev, ...entries]);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsNewOpen(false);
-    resetNewForm();
-    showSuccess("Cliente aggiunto con successo");
   }
 
   // ── Edit form handlers ────────────────────────────────────────────────────────
@@ -1261,9 +1256,10 @@ export default function ClientiPage() {
               <button
                 type="button"
                 onClick={handleNewSubmit}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98]"
+                disabled={isSubmitting}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Salva cliente
+                {isSubmitting ? "Salvataggio..." : "Salva cliente"}
               </button>
             </div>
           </div>

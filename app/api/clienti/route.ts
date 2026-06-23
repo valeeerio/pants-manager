@@ -39,3 +39,48 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { nome, cognome, telefono, email, citta, note } = body;
+
+    if (!nome || !cognome || !telefono) {
+      return NextResponse.json(
+        { error: "Nome, cognome e telefono sono obbligatori" },
+        { status: 400 }
+      );
+    }
+
+    const cliente = await prisma.client.create({
+      data: {
+        firstName: nome.trim(),
+        lastName: cognome.trim(),
+        phone: telefono.trim(),
+        email: email?.trim() || null,
+        city: citta?.trim() || null,
+        notes: note?.trim() || null,
+      },
+    });
+
+    return NextResponse.json({
+      id: cliente.id,
+      nome: cliente.firstName,
+      cognome: cliente.lastName,
+      telefono: cliente.phone,
+      email: cliente.email ?? null,
+      citta: cliente.city ?? null,
+      note: cliente.notes ?? null,
+      dataRegistrazione: cliente.createdAt.toISOString().split("T")[0],
+      numeroLavori: 0,
+      lavoriAttivi: 0,
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error("Errore POST /api/clienti:", error);
+    return NextResponse.json(
+      { error: "Errore nella creazione del cliente" },
+      { status: 500 }
+    );
+  }
+}
