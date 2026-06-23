@@ -34,7 +34,7 @@ type Cliente = {
   nome: string;
   cognome: string;
   telefono: string;
-  citta: string;
+  citta: string | null;
   email: string | null;
   note: string | null;
   dataRegistrazione: string;
@@ -105,24 +105,6 @@ function todayISO(): string {
 function emptyErrors(): FormErrors {
   return { nome: "", cognome: "", telefono: "", citta: "", email: "", duplicato: "" };
 }
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const CLIENTI_INIZIALI: Cliente[] = [
-  { id: "CL-001", nome: "Mario",     cognome: "Rossi",    telefono: "333-1234567", citta: "Milano",  email: "mario.rossi@email.it",      note: null,                                       dataRegistrazione: "2024-03-15", numeroLavori: 4, lavoriAttivi: 2 },
-  { id: "CL-002", nome: "Luca",      cognome: "Bianchi",  telefono: "347-2345678", citta: "Torino",  email: "luca.bianchi@email.it",     note: "Cliente puntuale nei ritiri",              dataRegistrazione: "2023-11-08", numeroLavori: 3, lavoriAttivi: 1 },
-  { id: "CL-003", nome: "Anna",      cognome: "Verdi",    telefono: "328-3456789", citta: "Roma",    email: "anna.verdi@email.it",       note: null,                                       dataRegistrazione: "2024-06-22", numeroLavori: 5, lavoriAttivi: 2 },
-  { id: "CL-004", nome: "Giuseppe",  cognome: "Neri",     telefono: "366-4567890", citta: "Napoli",  email: null,                        note: "Preferisce essere contattato al mattino",  dataRegistrazione: "2025-02-14", numeroLavori: 3, lavoriAttivi: 1 },
-  { id: "CL-005", nome: "Francesca", cognome: "Conti",    telefono: "391-5678901", citta: "Bologna", email: "francesca.conti@email.it",  note: null,                                       dataRegistrazione: "2024-09-03", numeroLavori: 2, lavoriAttivi: 0 },
-  { id: "CL-006", nome: "Roberto",   cognome: "Ferrara",  telefono: "349-6789012", citta: "Firenze", email: null,                        note: "Pantalone su misura in lavorazione",       dataRegistrazione: "2025-07-29", numeroLavori: 2, lavoriAttivi: 1 },
-  { id: "CL-007", nome: "Valentina", cognome: "Marino",   telefono: "335-7890123", citta: "Genova",  email: "v.marino@libero.it",        note: "Clientela fedele, sconto del 10% concordato", dataRegistrazione: "2024-01-18", numeroLavori: 6, lavoriAttivi: 3 },
-  { id: "CL-008", nome: "Carlo",     cognome: "Esposito", telefono: "320-8901234", citta: "Palermo", email: null,                        note: null,                                       dataRegistrazione: "2026-04-07", numeroLavori: 1, lavoriAttivi: 0 },
-  { id: "CL-009", nome: "Paola",     cognome: "Ricci",    telefono: "389-9012345", citta: "Bari",    email: "paola.ricci@gmail.com",     note: "Porta spesso capi di sartoria di pregio",  dataRegistrazione: "2023-05-11", numeroLavori: 8, lavoriAttivi: 4 },
-  { id: "CL-010", nome: "Davide",    cognome: "Lombardi", telefono: "340-0123456", citta: "Verona",  email: null,                        note: null,                                       dataRegistrazione: "2026-05-03", numeroLavori: 0, lavoriAttivi: 0 },
-  { id: "CL-011", nome: "Silvia",    cognome: "Gallo",    telefono: "377-1234509", citta: "Catania", email: "silvia.gallo@email.it",     note: "Referenziata da Anna Verdi",               dataRegistrazione: "2025-09-15", numeroLavori: 7, lavoriAttivi: 3 },
-  { id: "CL-012", nome: "Marco",     cognome: "Fabbri",   telefono: "368-2345670", citta: "Venezia", email: null,                        note: "Richiede sempre ricevuta",                 dataRegistrazione: "2026-02-28", numeroLavori: 2, lavoriAttivi: 1 },
-  { id: "CL-013", nome: "Elena",     cognome: "Russo",    telefono: "344-3456781", citta: "Trieste", email: "elena.russo@email.it",      note: null,                                       dataRegistrazione: "2026-05-01", numeroLavori: 4, lavoriAttivi: 2 },
-];
 
 // lavoriAttivi = stati NON "Consegnato" e NON "Annullato"
 const LAVORI_STORICO: LavoroStorico[] = [
@@ -239,7 +221,9 @@ function SortIndicator({ active, order }: { active: boolean; order: SortOrder })
 
 export default function ClientiPage() {
   // ── Data ─────────────────────────────────────────────────────────────────────
-  const [clienti, setClienti] = useState<Cliente[]>(CLIENTI_INIZIALI);
+  const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // ── List state ────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -292,6 +276,24 @@ export default function ClientiPage() {
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    async function caricaClienti() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/clienti");
+        if (!res.ok) throw new Error("Errore nel caricamento clienti");
+        const data = await res.json();
+        setClienti(data);
+      } catch (err) {
+        console.error(err);
+        setError("Impossibile caricare i clienti. Riprova.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    caricaClienti();
   }, []);
 
   useEffect(() => {
@@ -519,7 +521,7 @@ export default function ClientiPage() {
     setEditNome(selectedCliente.nome);
     setEditCognome(selectedCliente.cognome);
     setEditTelefono(selectedCliente.telefono);
-    setEditCitta(selectedCliente.citta);
+    setEditCitta(selectedCliente.citta ?? "");
     setEditEmail(selectedCliente.email ?? "");
     setEditNote(selectedCliente.note ?? "");
     setEditErrors(emptyErrors());
@@ -697,7 +699,7 @@ export default function ClientiPage() {
                 className={SELECT_CLASS}
               >
                 <option value="">Tutte</option>
-                {Array.from(new Set(clienti.map((c) => c.citta))).sort().map((citta) => (
+                {Array.from(new Set(clienti.map((c) => c.citta).filter((c): c is string => c !== null))).sort().map((citta) => (
                   <option key={citta} value={citta}>{citta}</option>
                 ))}
               </select>
@@ -736,7 +738,21 @@ export default function ClientiPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleClienti.map((cliente) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-16 text-center text-slate-400">
+                    <p className="text-sm">Caricamento clienti...</p>
+                  </TableCell>
+                </TableRow>
+              )}
+              {error && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-16 text-center">
+                    <p className="text-sm text-red-500">{error}</p>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && visibleClienti.map((cliente) => (
                 <TableRow
                   key={cliente.id}
                   className="cursor-pointer hover:bg-amber-50"
@@ -780,7 +796,7 @@ export default function ClientiPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {visibleClienti.length === 0 && (
+              {!loading && !error && visibleClienti.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-10 text-center text-slate-400">
                     Nessun cliente trovato. Prova a modificare i filtri.
