@@ -11,21 +11,111 @@ Contiene SOLO regole operative: come scrivere codice in questo progetto.
 ## Vincoli tecnici — LEGGERE PRIMA DI SCRIVERE CODICE
 
 **Progetto:** Gestionale Sartoria · Repository: `pants-manager`
-**Tipo:** Web app · Next.js 15 + TypeScript + Tailwind + shadcn/ui + Prisma + PostgreSQL
+**Tipo:** Web app · Next.js 15 (App Router, modalità standard) · TypeScript · Tailwind CSS · shadcn/ui · Prisma ORM · PostgreSQL su Supabase · Auth.js v5 · Vercel
 
-1. **Next.js è una web app standard** (App Router, no `static export`)
-   - ✅ API Routes (`app/api/`) abilitate
-   - ✅ Server Components con data fetching
-   - ✅ `next/image` con ottimizzazione server
-   - ✅ Middleware e tutte le funzionalità Next.js
+### Next.js — modalità standard
+- ✅ API Routes attive in `app/api/`
+- ✅ Server Components e Client Components entrambi disponibili
+- ✅ Middleware attivo (`middleware.ts` nella root)
+- ❌ NON usare `output: "export"` — rimosso definitivamente
 
-2. **Il database PostgreSQL NON è ancora collegato**
-   - Tutte le pagine usano mock data statici in file locali
-   - ❌ NON aggiungere chiamate a database o Prisma senza richiesta esplicita
+### Route groups — struttura obbligatoria
+```
+app/
+├── (main)/          → pagine protette, hanno la sidebar
+│   ├── layout.tsx   → layout con sidebar
+│   ├── page.tsx     → dashboard
+│   ├── clienti/
+│   ├── lavori/
+│   └── ...
+└── login/           → pagina pubblica, senza sidebar
+    └── page.tsx
+```
 
-3. **Backend = API Routes Next.js + Prisma**
-   - Le operazioni dati passeranno da API Routes, mai da `invoke()` Tauri
-   - ❌ NON usare `invoke()` — Tauri è stato rimosso
+### Prisma — singleton obbligatorio
+```ts
+// SEMPRE importare da @/lib/prisma
+import { prisma } from "@/lib/prisma"
+
+// MAI istanziare direttamente — causa connection pool exhaustion
+// ❌ const prisma = new PrismaClient()
+```
+
+### Pattern API Routes — struttura standard
+```ts
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+
+export async function GET() {
+  try {
+    const data = await prisma.model.findMany({ orderBy: { createdAt: "desc" } })
+    return NextResponse.json(data)
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Errore nel recupero dati" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const record = await prisma.model.create({ data: body })
+    return NextResponse.json(record, { status: 201 })
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Errore nella creazione" },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### Mapping enum → italiano (pattern consolidato)
+```ts
+// Usare sempre dizionari di mapping — mai hardcodare stringhe italiane nel DB
+const STATUS_MAP: Record<string, string> = {
+  TODO: "Da iniziare",
+  IN_PROGRESS: "In lavorazione",
+  WAITING_CUSTOMER: "In attesa cliente",
+  COMPLETED: "Pronto",
+  DELIVERED: "Consegnato",
+  CANCELLED: "Annullato",
+}
+
+const TYPE_MAP: Record<string, string> = {
+  HEM: "Orlo pantalone",
+  WAIST_TIGHTENING: "Stringere vita",
+  LEG_SHORTENING: "Accorciare gamba",
+  LEG_WIDENING: "Allargare pantalone",
+  ZIP_REPLACEMENT: "Sostituzione zip",
+  REPAIR: "Riparazione",
+  CUSTOM: "Su misura",
+  OTHER: "Altro",
+}
+```
+
+### Auth.js v5 — split Edge-safe (obbligatorio)
+- `auth.config.ts` — solo logica Edge-safe, zero import Node.js (no bcrypt, no prisma)
+- `auth.ts` — logica completa con bcryptjs e adapter Prisma
+- `middleware.ts` — importa SOLO da `auth.config.ts`, mai da `auth.ts`
+- API Routes protette → rispondere `401 JSON` se non autenticato, mai redirect
+
+### Variabili d'ambiente
+```
+DATABASE_URL    → connection string Supabase (pooled)
+DIRECT_URL      → connection string Supabase (direct, per migrazioni)
+AUTH_SECRET     → secret Auth.js
+AUTH_URL        → URL base app (solo in produzione Vercel)
+```
+- Configurare sia in `.env` locale che nel dashboard Vercel
+- `postinstall: prisma generate` in `package.json` — obbligatorio, non rimuovere
+
+### Deploy Vercel
+- Ogni push su `main` trigera deploy automatico in produzione
+- Build fallita su Vercel non impatta la produzione esistente
+- Verificare sempre `npm run build` in locale prima di pushare su `main`
 
 ---
 
@@ -38,7 +128,7 @@ Contiene SOLO regole operative: come scrivere codice in questo progetto.
 5. **Tutti i testi UI in italiano** — zero stringhe in inglese visibili
 6. **Tono artigianale e caldo** — no linguaggio aziendale/B2B
 7. **Codici lavoro `GS-xxx`** — mai `PM-`
-8. **Non reinventare i pattern** — usare quelli consolidati sotto
+8. **Non reinventare i pattern** — usare quelli consolidati in questo file
 9. **MAI eseguire `git add`, `commit` o `push` senza che il prompt lo richieda**
 
 ---
@@ -49,21 +139,22 @@ Ogni prompt operativo arriva con questa struttura in 8 sezioni.
 Se un prompt è ambiguo o manca una sezione critica, **chiedere chiarimenti PRIMA di scrivere codice**.
 
 ```
-1. CONTESTO      — fase di riferimento e branch su cui lavorare
-2. OBIETTIVO     — risultato atteso della modifica (UNO solo)
-3. FILE DA TOCCARE     — lista esplicita
-4. FILE DA NON TOCCARE — lista esplicita
-5. MOCK DATA     — dati di esempio, se servono
+1. CONTESTO              — fase di riferimento e branch su cui lavorare
+2. OBIETTIVO             — risultato atteso (UNO solo, verificabile)
+3. FILE DA TOCCARE       — lista esplicita con path completi
+4. FILE DA NON TOCCARE   — lista esplicita
+5. IMPLEMENTAZIONE       — dettagli tecnici: struttura, snippet, pattern da seguire
 6. CRITERI DI ACCETTAZIONE — condizioni verificabili che definiscono "fatto"
-7. VERIFICA      — livello di build richiesto (vedi Livelli di verifica)
-8. COMMIT        — presente solo se va committato, con il messaggio già fornito
+7. VERIFICA              — comando esatto da eseguire
+8. COMMIT                — presente solo se va committato, messaggio già fornito
 ```
 
-### Regole di esecuzione del prompt
-- **Primo comando di ogni sessione:** `git branch && git status`. Se il branch attivo non corrisponde al CONTESTO → fare checkout sul branch corretto prima di tutto
-- **Se la sezione COMMIT è assente → NON committare.** Fermarsi dopo la verifica e riportare l'esito
-- **Mai uscire dallo scope:** se durante il lavoro emerge un problema fuori dai file elencati → segnalarlo senza risolverlo
-- **Al termine, riportare sempre:** esito build · lista file modificati · criteri di accettazione soddisfatti o meno
+### Regole di esecuzione
+- **Primo comando sempre:** `git branch && git status`
+- **Branch ≠ CONTESTO** → checkout corretto prima di tutto
+- **COMMIT assente** → fermarsi dopo la verifica, non committare
+- **Problema fuori scope** → segnalarlo, non risolverlo
+- **Report finale obbligatorio:** esito build · file modificati · criteri soddisfatti
 
 ---
 
@@ -106,7 +197,6 @@ import ReactDOM from 'react-dom'
 
 ### Scroll lock
 ```tsx
-// Su TUTTI gli stati modal aperti simultaneamente
 useEffect(() => {
   const anyOpen = isDetailOpen || isNewOpen || isEditOpen
   document.body.style.overflow = anyOpen ? 'hidden' : ''
@@ -168,7 +258,7 @@ const handleSort = (col: string) => {
 Ordine fisso: [Search] [Dropdown 1] [Dropdown 2] [Dropdown 3]
 - Search real-time su nome, codice, tipo
 - Tutti i filtri combinabili tra loro (AND logic)
-- Sotto la tabella: "Stai visualizzando X di Y risultati" + bottone "Carica altri"
+- Sotto la tabella: "Stai visualizzando X di Y risultati"
 ```
 
 ### Validazione form inline
@@ -181,39 +271,33 @@ const [errors, setErrors] = useState<Record<string, string>>({})
 )}
 ```
 
-### Stati lavoro — badge
-```
-Da iniziare        → TODO
-In lavorazione     → IN_PROGRESS
-In attesa cliente  → WAITING_CUSTOMER
-Pronto             → COMPLETED
-Consegnato         → DELIVERED
-Annullato          → CANCELLED
-```
-
 ---
 
 ## Comandi
 
 ```bash
-npm run dev        # Dev quotidiano nel browser
-npm run build      # Verifica build Next.js — OBBLIGATORIA dopo ogni modifica
+npm run dev                              # dev locale
+npm run build                            # verifica build — SEMPRE prima del commit
+npx prisma studio                        # esplora il database via UI
+npx prisma migrate dev --name <nome>     # nuova migrazione
+npx prisma db seed                       # ri-esegui seed dati
 ```
 
 ### Livelli di verifica
 - **Modifica UI ordinaria** → `npm run build`
-- **Fine fase / modifica strutturale** (config, layout globale, dipendenze) → `npm run build`
+- **Modifica a API Routes o schema Prisma** → `npm run build` + test manuale endpoint
+- **Modifica a `middleware.ts`, `auth.config.ts`, `auth.ts`** → `npm run build` + verifica flusso login in locale
 
 ---
 
 ## Flusso Git
 
 ```bash
-# Inizio sessione — SEMPRE verificare dove si è
+# Inizio sessione
 git branch && git status
 
 # Fine modifica
-npm run build              # sempre
+npm run build
 
 # Commit (solo se richiesto dal prompt)
 git add <file modificati>
@@ -223,22 +307,23 @@ git push
 
 ### Formato messaggi di commit
 ```
-feat(lavori): aggiunta galleria foto prima/dopo nel dettaglio
+feat(pagamenti): implementazione pagina pagamenti con mock data
+feat(api): aggiunta route POST /api/pagamenti
 fix(modal): corretto scroll lock su modale annidato
-docs: aggiornamento README
 refactor(clienti): estratto componente tabella riutilizzabile
+docs: aggiornamento README e CLAUDE.md
 ```
 
 ### Branch
-- `main` — stabile, solo merge da feature branch
-- `feature/<area>` — un branch per area di lavoro (es. `feature/lavori`, `feature/pagamenti`)
-- `docs/setup-progetto` — documentazione
+- `main` — produzione, deploy automatico Vercel ad ogni push
+- `feature/<area>` — un branch per feature (es. `feature/pagamenti`)
+- `docs/setup-progetto` — solo documentazione
 
 ---
 
 ## Aggiornamento documentazione al commit
 
-- **README.md** — aggiornare SOLO se la modifica cambia qualcosa di visibile pubblicamente: nuova caratteristica completata (lista "Caratteristiche"), comandi, stack, architettura
-- **CLAUDE.md** — aggiornare SOLO se la modifica introduce un nuovo pattern UI consolidato o un nuovo vincolo tecnico
-- Se uno dei due file viene aggiornato, includerlo nello stesso commit della modifica
-- Lo stato fasi/roadmap NON va documentato qui — è gestito su Notion esternamente
+- **README.md** — aggiornare se cambia stack, caratteristiche visibili pubblicamente, comandi o stato progetto
+- **CLAUDE.md** — aggiornare se la modifica introduce un nuovo pattern UI, un nuovo vincolo tecnico o un nuovo pattern API
+- Se aggiornati, includerli nello stesso commit della modifica
+- Stato fasi e roadmap → solo su Notion, mai qui
