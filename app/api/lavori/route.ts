@@ -82,8 +82,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const count = await prisma.project.count();
-    const code = `GS-${String(count + 1).padStart(3, "0")}`;
+    const ultimo = await prisma.project.findFirst({
+      orderBy: { code: "desc" },
+      select: { code: true },
+    });
+    const prossimoNumero = ultimo
+      ? parseInt(ultimo.code.replace("GS-", "")) + 1
+      : 1;
+    const code = `GS-${String(prossimoNumero).padStart(3, "0")}`;
     const titoloAuto = TYPE_MAP[type] ?? "Lavoro";
 
     const lavoro = await prisma.project.create({

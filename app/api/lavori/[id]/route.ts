@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 
 const STATUS_MAP: Record<string, string> = {
@@ -39,7 +40,6 @@ export async function GET(
         client: {
           select: { firstName: true, lastName: true, phone: true },
         },
-        payments: true,
       },
     });
 
@@ -144,6 +144,15 @@ export async function PUT(
       description: lavoro.description ?? null,
     });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { error: "Lavoro non trovato" },
+        { status: 404 }
+      );
+    }
     console.error("Errore PUT /api/lavori/[id]:", error);
     return NextResponse.json(
       { error: "Errore nella modifica del lavoro" },

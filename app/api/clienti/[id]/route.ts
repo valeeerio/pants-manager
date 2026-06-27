@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 
 export async function GET(
@@ -125,6 +126,15 @@ export async function PUT(
     });
 
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { error: "Cliente non trovato" },
+        { status: 404 }
+      );
+    }
     console.error("Errore PUT /api/clienti/[id]:", error);
     return NextResponse.json(
       { error: "Errore nella modifica del cliente" },
