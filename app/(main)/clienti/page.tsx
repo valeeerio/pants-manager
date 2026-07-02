@@ -40,6 +40,7 @@ type Cliente = {
   dataRegistrazione: string;
   numeroLavori: number;
   lavoriAttivi: number;
+  segmentiStato?: Record<string, number>;
 };
 
 type LavoroStorico = {
@@ -165,15 +166,13 @@ const LAVORI_STORICO: LavoroStorico[] = [
   { id: "GSL-047", codiceLavoro: "GS-L047", clienteId: "CL-013", tipoLavoro: "Accorciare gamba",  stato: "Pronto",         dataConsegna: "2026-05-15", prezzo: 12 },
 ];
 
-function getSegmenti(clienteId: string, lavori: LavoroStorico[]) {
-  const jobs = lavori.filter((l) => l.clienteId === clienteId);
-  const completati = jobs.filter((l) => l.stato === "Consegnato").length;
-  const inCorso = jobs.filter(
-    (l) => l.stato === "In lavorazione" || l.stato === "In attesa cliente" || l.stato === "Pronto"
-  ).length;
-  const daFare = jobs.filter((l) => l.stato === "Da iniziare").length;
-  const annullati = jobs.filter((l) => l.stato === "Annullato").length;
-  const totale = jobs.length;
+function getSegmenti(cliente: Cliente) {
+  const s = cliente.segmentiStato ?? {};
+  const completati = s["DELIVERED"] ?? 0;
+  const inCorso = (s["IN_PROGRESS"] ?? 0) + (s["WAITING_CUSTOMER"] ?? 0) + (s["COMPLETED"] ?? 0);
+  const daFare = s["TODO"] ?? 0;
+  const annullati = s["CANCELLED"] ?? 0;
+  const totale = completati + inCorso + daFare + annullati;
   return { completati, inCorso, daFare, annullati, totale };
 }
 
@@ -196,6 +195,15 @@ const STATUS_COLORS: Record<string, string> = {
   Pronto:             "bg-green-100 text-green-700",
   Consegnato:         "bg-emerald-200 text-emerald-800",
   Annullato:          "bg-red-100 text-red-700",
+};
+
+const STATUS_MAP: Record<string, string> = {
+  TODO: "Da iniziare",
+  IN_PROGRESS: "In lavorazione",
+  WAITING_CUSTOMER: "In attesa cliente",
+  COMPLETED: "Pronto",
+  DELIVERED: "Consegnato",
+  CANCELLED: "Annullato",
 };
 
 const PAGE_SIZE = 10;
@@ -269,6 +277,11 @@ export default function ClientiPage() {
   // ── Lavori aggiuntivi (persistono tra sessioni form) ──────────────────────────
   const [lavoriAggiunti] = useState<LavoroStorico[]>([]);
 
+  // ── Storico lavori del cliente selezionato (da API) ───────────────────────────
+  const [clienteLavori, setClienteLavori] = useState<LavoroStorico[]>([]);
+  const [clienteLavoriLoading, setClienteLavoriLoading] = useState(false);
+  const [clienteLavoriError, setClienteLavoriError] = useState<string | null>(null);
+
   // ── Effects ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -314,7 +327,8 @@ export default function ClientiPage() {
   }, [isDeleteOpen, isEditOpen, isNewOpen, isDetailOpen]);
 
   // ── Merged lavori ─────────────────────────────────────────────────────────────
-  const tuttiLavori = useMemo(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _tuttiLavori = useMemo(
     () => [...LAVORI_STORICO, ...lavoriAggiunti],
     [lavoriAggiunti]
   );
@@ -337,16 +351,16 @@ export default function ClientiPage() {
 
     if (filterStato) {
       if (filterStato === "in_corso") {
-        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).inCorso > 0);
+        result = result.filter((c) => getSegmenti(c).inCorso > 0);
       } else if (filterStato === "da_iniziare") {
-        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).daFare > 0);
+        result = result.filter((c) => getSegmenti(c).daFare > 0);
       } else if (filterStato === "solo_completati") {
         result = result.filter((c) => {
-          const { completati, totale } = getSegmenti(c.id, tuttiLavori);
+          const { completati, totale } = getSegmenti(c);
           return totale > 0 && completati === totale;
         });
       } else if (filterStato === "senza") {
-        result = result.filter((c) => getSegmenti(c.id, tuttiLavori).totale === 0);
+        result = result.filter((c) => getSegmenti(c).totale === 0);
       }
     }
 
@@ -367,24 +381,23 @@ export default function ClientiPage() {
     });
 
     return result;
-  }, [clienti, searchQuery, filterStato, filterCitta, sortBy, sortOrder, tuttiLavori]);
+  }, [clienti, searchQuery, filterStato, filterCitta, sortBy, sortOrder]);
 
   // ── Detail stats ──────────────────────────────────────────────────────────────
 
   const detailStats = useMemo(() => {
     if (!selectedCliente) return null;
-    const jobs = tuttiLavori.filter((l) => l.clienteId === selectedCliente.id);
-    const totaleSpeso = jobs
+    const totaleSpeso = clienteLavori
       .filter((l) => l.stato === "Consegnato")
       .reduce((s, l) => s + l.prezzo, 0);
-    const daIncassare = jobs
+    const daIncassare = clienteLavori
       .filter((l) => l.stato === "Pronto")
       .reduce((s, l) => s + l.prezzo, 0);
-    const sorted = [...jobs].sort((a, b) =>
+    const sorted = [...clienteLavori].sort((a, b) =>
       b.dataConsegna.localeCompare(a.dataConsegna)
     );
     return { totaleSpeso, daIncassare, sorted };
-  }, [selectedCliente, tuttiLavori]);
+  }, [selectedCliente, clienteLavori]);
 
   // ── Utility ───────────────────────────────────────────────────────────────────
 
@@ -400,6 +413,44 @@ export default function ClientiPage() {
     } else {
       setSortBy(col);
       setSortOrder("asc");
+    }
+  }
+
+  async function apriDettaglioCliente(cliente: Cliente) {
+    setSelectedCliente(cliente);
+    setIsDetailOpen(true);
+    setClienteLavori([]);
+    setClienteLavoriError(null);
+    setClienteLavoriLoading(true);
+
+    try {
+      const res = await fetch(`/api/clienti/${cliente.id}`);
+      if (!res.ok) throw new Error("Errore nel caricamento dei lavori del cliente");
+      const data = await res.json();
+
+      const lavoriMappati: LavoroStorico[] = (data.lavori ?? []).map((l: {
+        id: string;
+        codice: string;
+        titolo: string;
+        stato: string;
+        dataConsegna: string | null;
+        prezzo: number | null;
+      }) => ({
+        id: l.id,
+        codiceLavoro: l.codice,
+        clienteId: cliente.id,
+        tipoLavoro: l.titolo,
+        stato: STATUS_MAP[l.stato] ?? l.stato,
+        dataConsegna: l.dataConsegna ?? "",
+        prezzo: l.prezzo ?? 0,
+      }));
+
+      setClienteLavori(lavoriMappati);
+    } catch (error) {
+      console.error("Errore fetch lavori cliente:", error);
+      setClienteLavoriError("Impossibile caricare lo storico lavori");
+    } finally {
+      setClienteLavoriLoading(false);
     }
   }
 
@@ -791,7 +842,7 @@ export default function ClientiPage() {
                 <TableRow
                   key={cliente.id}
                   className="cursor-pointer hover:bg-amber-50"
-                  onClick={() => { setSelectedCliente(cliente); setIsDetailOpen(true); }}
+                  onClick={() => apriDettaglioCliente(cliente)}
                 >
                   <TableCell className="font-medium text-slate-800">{cliente.nome}</TableCell>
                   <TableCell className="text-slate-700">{cliente.cognome}</TableCell>
@@ -799,7 +850,7 @@ export default function ClientiPage() {
                   <TableCell className="text-slate-700">{cliente.citta}</TableCell>
                   <TableCell className="min-w-[200px]">
                     {(() => {
-                      const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente.id, tuttiLavori);
+                      const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente);
                       if (totale === 0) return <span className="text-slate-400">—</span>;
                       return (
                         <div className="flex items-center gap-3">
@@ -862,7 +913,7 @@ export default function ClientiPage() {
 
       {/* ══ Tooltip lavori (segue il mouse) ═════════════════════════════════════ */}
       {tooltipData && (() => {
-        const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente.id, tuttiLavori);
+        const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente);
         return (
           <div
             style={{ position: "fixed", left: tooltipData.x + 12, top: tooltipData.y + 12, pointerEvents: "none", zIndex: 50 }}
@@ -1013,7 +1064,11 @@ export default function ClientiPage() {
               {/* Storico lavori */}
               <div>
                 <p className="mb-3 text-[15px] font-semibold text-slate-800">Storico lavori</p>
-                {detailStats.sorted.length === 0 ? (
+                {clienteLavoriLoading ? (
+                  <p className="text-center text-[13px] text-slate-500">Caricamento...</p>
+                ) : clienteLavoriError ? (
+                  <p className="text-center text-[13px] text-red-600">{clienteLavoriError}</p>
+                ) : detailStats.sorted.length === 0 ? (
                   <p className="text-center text-[13px] text-slate-500">
                     Nessun lavoro registrato per questo cliente.
                   </p>
@@ -1039,7 +1094,7 @@ export default function ClientiPage() {
                                 {lav.stato}
                               </span>
                             </td>
-                            <td className="py-2 text-slate-500">{formatDataIt(lav.dataConsegna)}</td>
+                            <td className="py-2 text-slate-500">{lav.dataConsegna ? formatDataIt(lav.dataConsegna) : "—"}</td>
                             <td className="py-2 text-right font-medium text-slate-700">€ {lav.prezzo}</td>
                           </tr>
                         ))}

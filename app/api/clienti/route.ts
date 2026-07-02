@@ -21,20 +21,28 @@ export async function GET() {
       },
     });
 
-    const clientiFormattati = clienti.map((c) => ({
-      id: c.id,
-      nome: c.firstName,
-      cognome: c.lastName,
-      telefono: c.phone,
-      email: c.email ?? null,
-      citta: c.city ?? null,
-      note: c.notes ?? null,
-      dataRegistrazione: c.createdAt.toISOString().split("T")[0],
-      numeroLavori: c._count.projects,
-      lavoriAttivi: c.projects.filter((p) =>
-        ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(p.status)
-      ).length,
-    }));
+    const clientiFormattati = clienti.map((c) => {
+      const segmentiStato = c.projects.reduce((acc, p) => {
+        acc[p.status] = (acc[p.status] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
+        id: c.id,
+        nome: c.firstName,
+        cognome: c.lastName,
+        telefono: c.phone,
+        email: c.email ?? null,
+        citta: c.city ?? null,
+        note: c.notes ?? null,
+        dataRegistrazione: c.createdAt.toISOString().split("T")[0],
+        numeroLavori: c._count.projects,
+        lavoriAttivi: c.projects.filter((p) =>
+          ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(p.status)
+        ).length,
+        segmentiStato,
+      };
+    });
 
     return NextResponse.json(clientiFormattati);
   } catch (error) {
