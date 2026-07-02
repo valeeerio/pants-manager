@@ -79,6 +79,15 @@ const STATUS_COLORS: Record<string, string> = {
   Annullato: "bg-red-200 text-red-800 border-transparent",
 };
 
+const REVERSE_STATUS_MAP: Record<string, string> = {
+  "Da iniziare": "TODO",
+  "In lavorazione": "IN_PROGRESS",
+  "In attesa cliente": "WAITING_CUSTOMER",
+  Pronto: "COMPLETED",
+  Consegnato: "DELIVERED",
+  Annullato: "CANCELLED",
+};
+
 const SELECT_CLASS =
   "h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60 cursor-pointer";
 
@@ -162,6 +171,8 @@ export default function JobsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quickStatusValue, setQuickStatusValue] = useState("");
   const [showStatusChange, setShowStatusChange] = useState(false);
+  const [isStatusChanging, setIsStatusChanging] = useState(false);
+  const [statusChangeError, setStatusChangeError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
   // Banner successo
@@ -502,17 +513,57 @@ export default function JobsPage() {
     setIsModalOpen(true);
   }
 
-  function applyStatusChange() {
+  async function applyStatusChange() {
     if (!selectedLavoro) return;
-    setJobs((prev) =>
-      prev.map((j) =>
-        j.id === selectedLavoro.id ? { ...j, status: quickStatusValue } : j
-      )
-    );
-    setSelectedLavoro((prev) =>
-      prev ? { ...prev, status: quickStatusValue } : null
-    );
-    setShowStatusChange(false);
+    setIsStatusChanging(true);
+    setStatusChangeError("");
+
+    try {
+      const res = await fetch(`/api/lavori/${selectedLavoro.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedLavoro.clientId ?? "",
+          type: selectedLavoro.typeRaw ?? "",
+          status: REVERSE_STATUS_MAP[quickStatusValue] ?? quickStatusValue,
+          dueDate: selectedLavoro.dueDate,
+          description: selectedLavoro.description,
+          estimatedPrice: selectedLavoro.estimatedPrice,
+          finalPrice: selectedLavoro.finalPrice,
+          notes: selectedLavoro.notes,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'aggiornamento dello stato");
+      }
+
+      const updated = await res.json();
+
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === selectedLavoro.id
+            ? { ...j, status: updated.status, statusRaw: updated.statusRaw }
+            : j
+        )
+      );
+      setSelectedLavoro((prev) =>
+        prev
+          ? { ...prev, status: updated.status, statusRaw: updated.statusRaw }
+          : null
+      );
+      setShowStatusChange(false);
+    } catch (error) {
+      console.error("Errore cambio stato:", error);
+      setStatusChangeError(
+        error instanceof Error
+          ? error.message
+          : "Errore nell'aggiornamento dello stato"
+      );
+    } finally {
+      setIsStatusChanging(false);
+    }
   }
 
   async function deleteLavoro() {
@@ -1045,6 +1096,7 @@ export default function JobsPage() {
                     value={quickStatusValue}
                     onChange={(e) => setQuickStatusValue(e.target.value)}
                     className={`${SELECT_CLASS} flex-1`}
+                    disabled={isStatusChanging}
                   >
                     <option value="Da iniziare">Da iniziare</option>
                     <option value="In lavorazione">In lavorazione</option>
@@ -1058,16 +1110,24 @@ export default function JobsPage() {
                   <Button
                     className="bg-amber-600 text-white hover:bg-amber-700"
                     onClick={applyStatusChange}
+                    disabled={isStatusChanging}
                   >
-                    Conferma
+                    {isStatusChanging ? "Salvataggio..." : "Conferma"}
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => setShowStatusChange(false)}
+                    onClick={() => {
+                      setShowStatusChange(false);
+                      setStatusChangeError("");
+                    }}
+                    disabled={isStatusChanging}
                   >
                     Annulla
                   </Button>
                 </div>
+                {statusChangeError && (
+                  <p className="mt-2 text-sm text-red-600">{statusChangeError}</p>
+                )}
               </div>
             )}
 
@@ -1085,7 +1145,10 @@ export default function JobsPage() {
                 <Button
                   variant="outline"
                   className="border-stone-300 hover:bg-stone-50"
-                  onClick={() => setShowStatusChange((v) => !v)}
+                  onClick={() => {
+                    setShowStatusChange((v) => !v);
+                    setStatusChangeError("");
+                  }}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Cambia stato
