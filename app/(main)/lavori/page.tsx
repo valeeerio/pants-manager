@@ -63,12 +63,6 @@ const FIELD_ERROR_CLASS =
 const TEXTAREA_CLASS =
   "w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 
-const stages = [
-  { label: "Da iniziare", count: 6 },
-  { label: "In lavorazione", count: 11 },
-  { label: "In attesa cliente", count: 4 },
-  { label: "Pronti", count: 9 },
-];
 
 const STATUS_COLORS: Record<string, string> = {
   "Da iniziare": "bg-slate-200 text-slate-800 border-transparent",
@@ -314,6 +308,13 @@ export default function JobsPage() {
 
     return result;
   }, [jobs, searchQuery, filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
+
+  const stages = useMemo(() => [
+    { label: "Da iniziare", count: jobs.filter((j) => j.statusRaw === "TODO").length },
+    { label: "In lavorazione", count: jobs.filter((j) => j.statusRaw === "IN_PROGRESS").length },
+    { label: "In attesa cliente", count: jobs.filter((j) => j.statusRaw === "WAITING_CUSTOMER").length },
+    { label: "Pronti", count: jobs.filter((j) => j.statusRaw === "COMPLETED").length },
+  ], [jobs]);
 
   function handleSort(col: SortKey) {
     if (sortBy === col) {
