@@ -102,69 +102,6 @@ function emptyErrors(): FormErrors {
   return { nome: "", cognome: "", telefono: "", citta: "", email: "", duplicato: "" };
 }
 
-// lavoriAttivi = stati NON "Consegnato" e NON "Annullato"
-const LAVORI_STORICO: LavoroStorico[] = [
-  // CL-001 Mario Rossi — 4 lavori, 2 attivi
-  { id: "GSL-001", codiceLavoro: "GS-L001", clienteId: "CL-001", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2024-04-10", prezzo: 15 },
-  { id: "GSL-002", codiceLavoro: "GS-L002", clienteId: "CL-001", tipoLavoro: "Stringere vita",    stato: "Consegnato",     dataConsegna: "2024-08-20", prezzo: 20 },
-  { id: "GSL-003", codiceLavoro: "GS-L003", clienteId: "CL-001", tipoLavoro: "Allargare pantalone", stato: "In lavorazione", dataConsegna: "2026-05-20", prezzo: 25 },
-  { id: "GSL-004", codiceLavoro: "GS-L004", clienteId: "CL-001", tipoLavoro: "Sostituzione zip",  stato: "Da iniziare",    dataConsegna: "2026-05-25", prezzo: 20 },
-  // CL-002 Luca Bianchi — 3 lavori, 1 attivo
-  { id: "GSL-005", codiceLavoro: "GS-L005", clienteId: "CL-002", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2024-01-15", prezzo: 15 },
-  { id: "GSL-006", codiceLavoro: "GS-L006", clienteId: "CL-002", tipoLavoro: "Orlo pantalone",    stato: "Annullato",      dataConsegna: "2024-06-10", prezzo: 30 },
-  { id: "GSL-007", codiceLavoro: "GS-L007", clienteId: "CL-002", tipoLavoro: "Accorciare gamba",  stato: "Pronto",         dataConsegna: "2026-05-10", prezzo: 12 },
-  // CL-003 Anna Verdi — 5 lavori, 2 attivi
-  { id: "GSL-008", codiceLavoro: "GS-L008", clienteId: "CL-003", tipoLavoro: "Sostituzione zip",  stato: "Consegnato",     dataConsegna: "2024-07-05", prezzo: 18 },
-  { id: "GSL-009", codiceLavoro: "GS-L009", clienteId: "CL-003", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2024-10-12", prezzo: 22 },
-  { id: "GSL-010", codiceLavoro: "GS-L010", clienteId: "CL-003", tipoLavoro: "Stringere vita",    stato: "Consegnato",     dataConsegna: "2025-03-08", prezzo: 28 },
-  { id: "GSL-011", codiceLavoro: "GS-L011", clienteId: "CL-003", tipoLavoro: "Orlo pantalone",    stato: "In lavorazione", dataConsegna: "2026-05-15", prezzo: 15 },
-  { id: "GSL-012", codiceLavoro: "GS-L012", clienteId: "CL-003", tipoLavoro: "Riparazione strappo", stato: "In attesa cliente", dataConsegna: "2026-05-22", prezzo: 18 },
-  // CL-004 Giuseppe Neri — 3 lavori, 1 attivo
-  { id: "GSL-013", codiceLavoro: "GS-L013", clienteId: "CL-004", tipoLavoro: "Accorciare gamba",  stato: "Consegnato",     dataConsegna: "2025-03-20", prezzo: 12 },
-  { id: "GSL-014", codiceLavoro: "GS-L014", clienteId: "CL-004", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2025-08-14", prezzo: 16 },
-  { id: "GSL-015", codiceLavoro: "GS-L015", clienteId: "CL-004", tipoLavoro: "Accorciare gamba",  stato: "Da iniziare",    dataConsegna: "2026-05-22", prezzo: 16 },
-  // CL-005 Francesca Conti — 2 lavori, 0 attivi
-  { id: "GSL-016", codiceLavoro: "GS-L016", clienteId: "CL-005", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2024-10-01", prezzo: 22 },
-  { id: "GSL-017", codiceLavoro: "GS-L017", clienteId: "CL-005", tipoLavoro: "Accorciare gamba",  stato: "Consegnato",     dataConsegna: "2025-05-18", prezzo: 14 },
-  // CL-006 Roberto Ferrara — 2 lavori, 1 attivo
-  { id: "GSL-018", codiceLavoro: "GS-L018", clienteId: "CL-006", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2025-09-10", prezzo: 18 },
-  { id: "GSL-019", codiceLavoro: "GS-L019", clienteId: "CL-006", tipoLavoro: "Pantalone su misura", stato: "In lavorazione", dataConsegna: "2026-05-25", prezzo: 85 },
-  // CL-007 Valentina Marino — 6 lavori, 3 attivi
-  { id: "GSL-020", codiceLavoro: "GS-L020", clienteId: "CL-007", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2024-02-14", prezzo: 15 },
-  { id: "GSL-021", codiceLavoro: "GS-L021", clienteId: "CL-007", tipoLavoro: "Stringere vita",    stato: "Consegnato",     dataConsegna: "2024-05-20", prezzo: 20 },
-  { id: "GSL-022", codiceLavoro: "GS-L022", clienteId: "CL-007", tipoLavoro: "Sostituzione zip",  stato: "Consegnato",     dataConsegna: "2024-09-08", prezzo: 18 },
-  { id: "GSL-023", codiceLavoro: "GS-L023", clienteId: "CL-007", tipoLavoro: "Accorciare gamba",  stato: "In lavorazione", dataConsegna: "2026-05-14", prezzo: 12 },
-  { id: "GSL-024", codiceLavoro: "GS-L024", clienteId: "CL-007", tipoLavoro: "Riparazione strappo", stato: "Pronto",       dataConsegna: "2026-05-08", prezzo: 22 },
-  { id: "GSL-025", codiceLavoro: "GS-L025", clienteId: "CL-007", tipoLavoro: "Altro",             stato: "Da iniziare",    dataConsegna: "2026-05-28", prezzo: 35 },
-  // CL-008 Carlo Esposito — 1 lavoro, 0 attivi
-  { id: "GSL-026", codiceLavoro: "GS-L026", clienteId: "CL-008", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2026-04-15", prezzo: 15 },
-  // CL-009 Paola Ricci — 8 lavori, 4 attivi
-  { id: "GSL-027", codiceLavoro: "GS-L027", clienteId: "CL-009", tipoLavoro: "Pantalone su misura", stato: "Consegnato",   dataConsegna: "2023-07-10", prezzo: 120 },
-  { id: "GSL-028", codiceLavoro: "GS-L028", clienteId: "CL-009", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2023-11-22", prezzo: 22  },
-  { id: "GSL-029", codiceLavoro: "GS-L029", clienteId: "CL-009", tipoLavoro: "Stringere vita",    stato: "Consegnato",     dataConsegna: "2024-04-18", prezzo: 20  },
-  { id: "GSL-030", codiceLavoro: "GS-L030", clienteId: "CL-009", tipoLavoro: "Sostituzione zip",  stato: "Consegnato",     dataConsegna: "2024-08-30", prezzo: 18  },
-  { id: "GSL-031", codiceLavoro: "GS-L031", clienteId: "CL-009", tipoLavoro: "Pantalone su misura", stato: "In lavorazione", dataConsegna: "2026-06-15", prezzo: 130 },
-  { id: "GSL-032", codiceLavoro: "GS-L032", clienteId: "CL-009", tipoLavoro: "Orlo pantalone",    stato: "Pronto",         dataConsegna: "2026-05-09", prezzo: 15  },
-  { id: "GSL-033", codiceLavoro: "GS-L033", clienteId: "CL-009", tipoLavoro: "Accorciare gamba",  stato: "In attesa cliente", dataConsegna: "2026-05-20", prezzo: 12 },
-  { id: "GSL-034", codiceLavoro: "GS-L034", clienteId: "CL-009", tipoLavoro: "Stringere vita",    stato: "Da iniziare",    dataConsegna: "2026-05-30", prezzo: 20  },
-  // CL-010 Davide Lombardi — 0 lavori
-  // CL-011 Silvia Gallo — 7 lavori, 3 attivi
-  { id: "GSL-035", codiceLavoro: "GS-L035", clienteId: "CL-011", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2025-10-05", prezzo: 15 },
-  { id: "GSL-036", codiceLavoro: "GS-L036", clienteId: "CL-011", tipoLavoro: "Accorciare gamba",  stato: "Consegnato",     dataConsegna: "2025-11-18", prezzo: 12 },
-  { id: "GSL-037", codiceLavoro: "GS-L037", clienteId: "CL-011", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2025-12-20", prezzo: 22 },
-  { id: "GSL-038", codiceLavoro: "GS-L038", clienteId: "CL-011", tipoLavoro: "Stringere vita",    stato: "Consegnato",     dataConsegna: "2026-01-15", prezzo: 20 },
-  { id: "GSL-039", codiceLavoro: "GS-L039", clienteId: "CL-011", tipoLavoro: "Sostituzione zip",  stato: "In lavorazione", dataConsegna: "2026-05-18", prezzo: 18 },
-  { id: "GSL-040", codiceLavoro: "GS-L040", clienteId: "CL-011", tipoLavoro: "Pantalone su misura", stato: "Da iniziare", dataConsegna: "2026-06-10", prezzo: 95 },
-  { id: "GSL-041", codiceLavoro: "GS-L041", clienteId: "CL-011", tipoLavoro: "Orlo pantalone",    stato: "Pronto",         dataConsegna: "2026-05-12", prezzo: 15 },
-  // CL-012 Marco Fabbri — 2 lavori, 1 attivo
-  { id: "GSL-042", codiceLavoro: "GS-L042", clienteId: "CL-012", tipoLavoro: "Accorciare gamba",  stato: "Consegnato",     dataConsegna: "2026-03-20", prezzo: 12 },
-  { id: "GSL-043", codiceLavoro: "GS-L043", clienteId: "CL-012", tipoLavoro: "Stringere vita",    stato: "In lavorazione", dataConsegna: "2026-05-20", prezzo: 20 },
-  // CL-013 Elena Russo — 4 lavori, 2 attivi
-  { id: "GSL-044", codiceLavoro: "GS-L044", clienteId: "CL-013", tipoLavoro: "Orlo pantalone",    stato: "Consegnato",     dataConsegna: "2026-05-05", prezzo: 15 },
-  { id: "GSL-045", codiceLavoro: "GS-L045", clienteId: "CL-013", tipoLavoro: "Riparazione strappo", stato: "Consegnato",   dataConsegna: "2026-05-08", prezzo: 22 },
-  { id: "GSL-046", codiceLavoro: "GS-L046", clienteId: "CL-013", tipoLavoro: "Sostituzione zip",  stato: "Da iniziare",    dataConsegna: "2026-05-25", prezzo: 18 },
-  { id: "GSL-047", codiceLavoro: "GS-L047", clienteId: "CL-013", tipoLavoro: "Accorciare gamba",  stato: "Pronto",         dataConsegna: "2026-05-15", prezzo: 12 },
-];
 
 function getSegmenti(cliente: Cliente) {
   const s = cliente.segmentiStato ?? {};
@@ -263,6 +200,8 @@ export default function ClientiPage() {
   const [isLavoriOpen, setIsLavoriOpen] = useState(false);
   const [newLavori, setNewLavori] = useState<LavoroForm[]>([]);
   const lavoroCounter = useRef(0);
+  const [maxCodiceDB, setMaxCodiceDB] = useState<number>(0);
+  const [loadingCodice, setLoadingCodice] = useState(false);
 
   // ── Edit form ─────────────────────────────────────────────────────────────────
   const [editNome, setEditNome] = useState("");
@@ -273,9 +212,6 @@ export default function ClientiPage() {
   const [editNote, setEditNote] = useState("");
   const [editErrors, setEditErrors] = useState<FormErrors>(emptyErrors());
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
-  // ── Lavori aggiuntivi (persistono tra sessioni form) ──────────────────────────
-  const [lavoriAggiunti] = useState<LavoroStorico[]>([]);
 
   // ── Storico lavori del cliente selezionato (da API) ───────────────────────────
   const [clienteLavori, setClienteLavori] = useState<LavoroStorico[]>([]);
@@ -326,12 +262,22 @@ export default function ClientiPage() {
     return () => document.removeEventListener("keydown", onKey);
   }, [isDeleteOpen, isEditOpen, isNewOpen, isDetailOpen]);
 
-  // ── Merged lavori ─────────────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _tuttiLavori = useMemo(
-    () => [...LAVORI_STORICO, ...lavoriAggiunti],
-    [lavoriAggiunti]
-  );
+  useEffect(() => {
+    if (!isNewOpen) return;
+    setLoadingCodice(true);
+    fetch("/api/lavori")
+      .then((r) => r.json())
+      .then((lavori: { code: string }[]) => {
+        let max = 0;
+        for (const l of lavori) {
+          const match = l.code.match(/^GS-(\d+)$/);
+          if (match) max = Math.max(max, parseInt(match[1], 10));
+        }
+        setMaxCodiceDB(max);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCodice(false));
+  }, [isNewOpen]);
 
   // ── Filtered + sorted list ────────────────────────────────────────────────────
 
@@ -461,6 +407,7 @@ export default function ClientiPage() {
     setNewCitta(""); setNewEmail(""); setNewNote("");
     setNewErrors(emptyErrors());
     setIsLavoriOpen(false); setNewLavori([]);
+    setMaxCodiceDB(0);
   }
 
   function validateNew(): boolean {
@@ -657,13 +604,9 @@ export default function ClientiPage() {
 
   function addLavoro() {
     lavoroCounter.current++;
-    const allCodes = [
-      ...LAVORI_STORICO.map((l) => l.codiceLavoro),
-      ...newLavori.map((l) => l.codiceLavoro),
-    ];
-    let max = 0;
-    for (const code of allCodes) {
-      const match = code.match(/^GS-L?(\d+)$/);
+    let max = maxCodiceDB;
+    for (const lav of newLavori) {
+      const match = lav.codiceLavoro.match(/^GS-(\d+)$/);
       if (match) max = Math.max(max, parseInt(match[1], 10));
     }
     const codiceLavoro = `GS-${String(max + 1).padStart(3, "0")}`;
@@ -1331,9 +1274,10 @@ export default function ClientiPage() {
                   <button
                     type="button"
                     onClick={addLavoro}
-                    className="w-full rounded-lg border border-amber-600 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50"
+                    disabled={loadingCodice}
+                    className="w-full rounded-lg border border-amber-600 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    + Aggiungi lavoro
+                    {loadingCodice ? "Caricamento..." : "+ Aggiungi lavoro"}
                   </button>
                 </div>
               )}

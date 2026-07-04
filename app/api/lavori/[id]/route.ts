@@ -175,6 +175,15 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { error: "Lavoro non trovato" },
+        { status: 404 }
+      );
+    }
     console.error("Errore DELETE /api/lavori/[id]:", error);
     return NextResponse.json(
       { error: "Errore nell'eliminazione del lavoro" },
