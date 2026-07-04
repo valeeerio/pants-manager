@@ -143,6 +143,17 @@ const STATUS_MAP: Record<string, string> = {
   CANCELLED: "Annullato",
 };
 
+const TIPO_LAVORO_TO_ENUM: Record<string, string> = {
+  "Orlo pantalone":     "HEM",
+  "Stringere vita":     "WAIST_TIGHTENING",
+  "Accorciare gamba":   "LEG_SHORTENING",
+  "Allargare pantalone":"LEG_WIDENING",
+  "Sostituzione zip":   "ZIP_REPLACEMENT",
+  "Riparazione strappo":"REPAIR",
+  "Pantalone su misura":"CUSTOM",
+  "Altro":              "OTHER",
+};
+
 const PAGE_SIZE = 10;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -487,6 +498,42 @@ export default function ClientiPage() {
       }
 
       const clienteCreato = await res.json();
+
+      if (newLavori.length > 0) {
+        const risultati = await Promise.allSettled(
+          newLavori.map((lav) =>
+            fetch("/api/lavori", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                clientId: clienteCreato.id,
+                type: TIPO_LAVORO_TO_ENUM[lav.tipoLavoro] ?? "OTHER",
+                dueDate: lav.dataConsegna,
+                description: lav.descrizione || null,
+                price: lav.prezzo || null,
+              }),
+            }).then(async (r) => {
+              if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error ?? "Lavoro non salvato");
+              }
+              return r.json();
+            })
+          )
+        );
+
+        const falliti = risultati.filter((r) => r.status === "rejected").length;
+        setClienti((prev) => [clienteCreato, ...prev]);
+        setIsNewOpen(false);
+        resetNewForm();
+        showSuccess(
+          falliti > 0
+            ? `Cliente creato, ma ${falliti} lavoro/i pregressi non salvati — aggiungili dalla pagina Lavori.`
+            : "Cliente e lavori pregressi aggiunti con successo"
+        );
+        return;
+      }
+
       setClienti((prev) => [clienteCreato, ...prev]);
       setIsNewOpen(false);
       resetNewForm();

@@ -1057,10 +1057,6 @@ export default function JobsPage() {
                   label="Data consegna"
                   value={selectedLavoro.dueDate}
                 />
-                <Field
-                  label="Prezzo"
-                  value={selectedLavoro.price != null ? `€ ${selectedLavoro.price}` : null}
-                />
               </div>
               <div className="mt-4 space-y-4">
                 <Field
@@ -1185,6 +1181,12 @@ export default function JobsPage() {
                       )}
                     </div>
                   )}
+                  <div className="mb-4">
+                    <Field
+                      label="Prezzo lavoro"
+                      value={selectedLavoro.price != null ? `€ ${selectedLavoro.price}` : null}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
