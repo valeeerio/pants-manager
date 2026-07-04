@@ -25,8 +25,7 @@ export async function GET(
             title: true,
             status: true,
             dueDate: true,
-            estimatedPrice: true,
-            finalPrice: true,
+            price: true,
           },
         },
         _count: {
@@ -61,7 +60,7 @@ export async function GET(
         titolo: p.title,
         stato: p.status,
         dataConsegna: p.dueDate?.toISOString().split("T")[0] ?? null,
-        prezzo: p.finalPrice ?? p.estimatedPrice ?? null,
+        prezzo: p.price ?? null,
       })),
     });
   } catch (error) {

@@ -49,8 +49,7 @@ export async function GET() {
       statusRaw: l.status,
       receivedAt: l.receivedAt.toISOString().split("T")[0],
       dueDate: l.dueDate?.toISOString().split("T")[0] ?? null,
-      estimatedPrice: l.estimatedPrice ?? null,
-      finalPrice: l.finalPrice ?? null,
+      price: l.price ?? null,
       notes: l.notes ?? null,
       description: l.description ?? null,
     }));
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { clientId, type, dueDate, description, estimatedPrice, notes } = body;
+    const { clientId, type, dueDate, description, price, notes } = body;
 
     if (!clientId || !type || !dueDate) {
       return NextResponse.json(
@@ -101,7 +100,7 @@ export async function POST(req: Request) {
         type,
         status: "TODO",
         dueDate: new Date(dueDate),
-        estimatedPrice: estimatedPrice ? parseFloat(estimatedPrice) : null,
+        price: price ? parseFloat(price) : null,
         notes: notes?.trim() || null,
       },
       include: {
@@ -123,8 +122,7 @@ export async function POST(req: Request) {
         statusRaw: lavoro.status,
         receivedAt: lavoro.receivedAt.toISOString().split("T")[0],
         dueDate: lavoro.dueDate?.toISOString().split("T")[0] ?? null,
-        estimatedPrice: lavoro.estimatedPrice ?? null,
-        finalPrice: lavoro.finalPrice ?? null,
+        price: lavoro.price ?? null,
         notes: lavoro.notes ?? null,
         description: lavoro.description ?? null,
       },

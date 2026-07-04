@@ -24,8 +24,7 @@ export async function GET(
             code: true,
             title: true,
             status: true,
-            finalPrice: true,
-            estimatedPrice: true,
+            price: true,
             client: {
               select: { firstName: true, lastName: true, phone: true },
             },
@@ -49,7 +48,7 @@ export async function GET(
       projectStatus: pagamento.project.status,
       clientName: `${pagamento.project.client.firstName} ${pagamento.project.client.lastName}`,
       clientPhone: pagamento.project.client.phone,
-      amount: pagamento.amount,
+      amount: pagamento.project.price ?? 0,
       status: pagamento.status,
       method: pagamento.method ?? null,
       paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,
@@ -78,18 +77,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { amount, status, method, paidAt, notes } = body
+    const { status, method, paidAt, notes } = body
 
-    if (amount === undefined || amount === null || !status) {
+    if (!status) {
       return NextResponse.json(
-        { error: "amount e status sono obbligatori" },
-        { status: 400 }
-      )
-    }
-
-    if (typeof amount !== "number" || amount <= 0) {
-      return NextResponse.json(
-        { error: "amount deve essere un numero maggiore di zero" },
+        { error: "status è obbligatorio" },
         { status: 400 }
       )
     }
@@ -104,7 +96,6 @@ export async function PUT(
     const pagamento = await prisma.payment.update({
       where: { id },
       data: {
-        amount,
         status,
         method: method ?? null,
         paidAt: paidAtValue,
@@ -115,6 +106,7 @@ export async function PUT(
           select: {
             code: true,
             title: true,
+            price: true,
             client: { select: { firstName: true, lastName: true } },
           },
         },
@@ -127,7 +119,7 @@ export async function PUT(
       projectCode: pagamento.project.code,
       projectTitle: pagamento.project.title,
       clientName: `${pagamento.project.client.firstName} ${pagamento.project.client.lastName}`,
-      amount: pagamento.amount,
+      amount: pagamento.project.price ?? 0,
       status: pagamento.status,
       method: pagamento.method ?? null,
       paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,

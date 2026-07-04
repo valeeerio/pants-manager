@@ -61,8 +61,7 @@ export async function GET(
       statusRaw: lavoro.status,
       receivedAt: lavoro.receivedAt.toISOString().split("T")[0],
       dueDate: lavoro.dueDate?.toISOString().split("T")[0] ?? null,
-      estimatedPrice: lavoro.estimatedPrice ?? null,
-      finalPrice: lavoro.finalPrice ?? null,
+      price: lavoro.price ?? null,
       notes: lavoro.notes ?? null,
       description: lavoro.description ?? null,
     });
@@ -93,8 +92,7 @@ export async function PUT(
       status,
       dueDate,
       description,
-      estimatedPrice,
-      finalPrice,
+      price,
       notes,
     } = body;
 
@@ -116,8 +114,7 @@ export async function PUT(
         type,
         status,
         dueDate: dueDate ? new Date(dueDate) : null,
-        estimatedPrice: estimatedPrice ? parseFloat(estimatedPrice) : null,
-        finalPrice: finalPrice ? parseFloat(finalPrice) : null,
+        price: price ? parseFloat(price) : null,
         notes: notes?.trim() || null,
       },
       include: {
@@ -138,8 +135,7 @@ export async function PUT(
       statusRaw: lavoro.status,
       receivedAt: lavoro.receivedAt.toISOString().split("T")[0],
       dueDate: lavoro.dueDate?.toISOString().split("T")[0] ?? null,
-      estimatedPrice: lavoro.estimatedPrice ?? null,
-      finalPrice: lavoro.finalPrice ?? null,
+      price: lavoro.price ?? null,
       notes: lavoro.notes ?? null,
       description: lavoro.description ?? null,
     });

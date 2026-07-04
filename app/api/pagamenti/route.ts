@@ -36,8 +36,7 @@ export async function GET(request: NextRequest) {
           select: {
             code: true,
             title: true,
-            finalPrice: true,
-            estimatedPrice: true,
+            price: true,
             client: {
               select: { firstName: true, lastName: true },
             },
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
       projectCode: p.project.code,
       projectTitle: p.project.title,
       clientName: `${p.project.client.firstName} ${p.project.client.lastName}`,
-      amount: p.amount,
+      amount: p.project.price ?? 0,
       status: p.status,
       method: p.method ?? null,
       paidAt: p.paidAt?.toISOString().split("T")[0] ?? null,
@@ -82,18 +81,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { projectId, amount, status, method, paidAt, notes } = body
+    const { projectId, status, method, paidAt, notes } = body
 
-    if (!projectId || amount === undefined || amount === null || !status) {
+    if (!projectId || !status) {
       return NextResponse.json(
-        { error: "projectId, amount e status sono obbligatori" },
-        { status: 400 }
-      )
-    }
-
-    if (typeof amount !== "number" || amount <= 0) {
-      return NextResponse.json(
-        { error: "amount deve essere un numero maggiore di zero" },
+        { error: "projectId e status sono obbligatori" },
         { status: 400 }
       )
     }
@@ -104,8 +96,7 @@ export async function POST(request: NextRequest) {
         id: true,
         code: true,
         title: true,
-        finalPrice: true,
-        estimatedPrice: true,
+        price: true,
         client: { select: { firstName: true, lastName: true } },
       },
     })
@@ -127,7 +118,6 @@ export async function POST(request: NextRequest) {
     const pagamento = await prisma.payment.create({
       data: {
         projectId,
-        amount,
         status,
         method: method ?? null,
         paidAt: paidAtValue,
@@ -142,7 +132,7 @@ export async function POST(request: NextRequest) {
         projectCode: project.code,
         projectTitle: project.title,
         clientName: `${project.client.firstName} ${project.client.lastName}`,
-        amount: pagamento.amount,
+        amount: project.price ?? 0,
         status: pagamento.status,
         method: pagamento.method ?? null,
         paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,
