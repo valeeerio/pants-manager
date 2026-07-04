@@ -56,6 +56,15 @@ type Job = {
 };
 
 
+type PaymentData = {
+  id: string;
+  amount: number;
+  status: string;
+  method: string | null;
+  paidAt: string | null;
+  createdAt: string;
+};
+
 const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 const FIELD_ERROR_CLASS =
@@ -210,6 +219,16 @@ export default function JobsPage() {
     dataConsegna: "",
   });
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Pagamento collegato al lavoro nel modal dettaglio
+  const [existingPayment, setExistingPayment] = useState<PaymentData | null>(null);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("UNPAID");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [isPaymentSaving, setIsPaymentSaving] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSavedMsg, setPaymentSavedMsg] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -505,6 +524,75 @@ export default function JobsPage() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isNewModalOpen, isEditModalOpen]);
+
+  useEffect(() => {
+    if (!isModalOpen || !selectedLavoro) return;
+    setExistingPayment(null);
+    setPaymentError("");
+    setPaymentSavedMsg(false);
+    setIsPaymentLoading(true);
+    fetch(`/api/pagamenti?projectId=${selectedLavoro.id}`)
+      .then((r) => r.json())
+      .then((data: PaymentData[]) => {
+        setExistingPayment(data.length > 0 ? data[0] : null);
+      })
+      .catch(() => setPaymentError("Impossibile caricare il pagamento."))
+      .finally(() => setIsPaymentLoading(false));
+  }, [selectedLavoro?.id, isModalOpen]);
+
+  useEffect(() => {
+    if (existingPayment) {
+      setPaymentAmount(String(existingPayment.amount));
+      setPaymentStatus(existingPayment.status);
+      setPaymentMethod(existingPayment.method ?? "");
+    } else {
+      setPaymentAmount("");
+      setPaymentStatus("UNPAID");
+      setPaymentMethod("");
+    }
+  }, [existingPayment]);
+
+  useEffect(() => {
+    if (!paymentSavedMsg) return;
+    const t = setTimeout(() => setPaymentSavedMsg(false), 2000);
+    return () => clearTimeout(t);
+  }, [paymentSavedMsg]);
+
+  async function savePayment() {
+    if (!selectedLavoro) return;
+    const amount = Number(paymentAmount);
+    if (!paymentAmount || isNaN(amount) || amount <= 0) {
+      setPaymentError("Inserisci un importo valido (maggiore di zero).");
+      return;
+    }
+    setPaymentError("");
+    setIsPaymentSaving(true);
+    try {
+      const body = { amount, status: paymentStatus, method: paymentMethod || null };
+      const res = existingPayment
+        ? await fetch(`/api/pagamenti/${existingPayment.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          })
+        : await fetch("/api/pagamenti", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId: selectedLavoro.id, ...body }),
+          });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nel salvataggio");
+      }
+      const saved: PaymentData = await res.json();
+      setExistingPayment(saved);
+      setPaymentSavedMsg(true);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Errore nel salvataggio.");
+    } finally {
+      setIsPaymentSaving(false);
+    }
+  }
 
   function openModal(job: Job) {
     setSelectedLavoro(job);
@@ -1084,6 +1172,100 @@ export default function JobsPage() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Sezione pagamento */}
+            <div className="border-t border-stone-200 px-6 pt-5 pb-6">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">
+                Pagamento
+              </p>
+              {isPaymentLoading ? (
+                <p className="text-[13px] text-slate-400">Caricamento...</p>
+              ) : (
+                <>
+                  {existingPayment && (
+                    <div className="mb-4 flex items-center gap-2">
+                      <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                        existingPayment.status === "PAID"
+                          ? "bg-green-50 text-green-800 border-green-200"
+                          : existingPayment.status === "DEPOSIT_PAID"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-stone-50 text-stone-600 border-stone-200"
+                      }`}>
+                        {existingPayment.status === "PAID"
+                          ? "Pagato"
+                          : existingPayment.status === "DEPOSIT_PAID"
+                          ? "Acconto pagato"
+                          : "Non pagato"}
+                      </span>
+                      <span className="text-[13px] font-bold text-slate-900">
+                        {new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(existingPayment.amount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Importo (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="0.00"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Stato
+                      </label>
+                      <select
+                        value={paymentStatus}
+                        onChange={(e) => setPaymentStatus(e.target.value)}
+                        className={`${SELECT_CLASS} w-full`}
+                      >
+                        <option value="UNPAID">Non pagato</option>
+                        <option value="DEPOSIT_PAID">Acconto pagato</option>
+                        <option value="PAID">Pagato</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Metodo
+                      </label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className={`${SELECT_CLASS} w-full`}
+                      >
+                        <option value="">Nessuno</option>
+                        <option value="CASH">Contanti</option>
+                        <option value="CARD">Carta</option>
+                        <option value="BANK_TRANSFER">Bonifico</option>
+                        <option value="OTHER">Altro</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <Button
+                      className="bg-amber-600 text-white hover:bg-amber-700"
+                      onClick={savePayment}
+                      disabled={isPaymentSaving}
+                    >
+                      {isPaymentSaving ? "Salvataggio..." : "Salva pagamento"}
+                    </Button>
+                    {paymentSavedMsg && (
+                      <span className="text-[13px] font-medium text-green-700">Salvato</span>
+                    )}
+                  </div>
+                  {paymentError && (
+                    <p className="mt-2 text-sm text-red-600">{paymentError}</p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Sezione cambia stato (inline) */}
