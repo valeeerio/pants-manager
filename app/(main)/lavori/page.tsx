@@ -48,8 +48,7 @@ type Job = {
   statusRaw?: string;
   receivedAt: string;
   dueDate: string | null;
-  estimatedPrice: number | null;
-  finalPrice: number | null;
+  price: number | null;
   description: string | null;
   notes: string | null;
   photos?: JobPhotos;
@@ -58,7 +57,6 @@ type Job = {
 
 type PaymentData = {
   id: string;
-  amount: number;
   status: string;
   method: string | null;
   paidAt: string | null;
@@ -100,7 +98,7 @@ type SortKey =
   | "type"
   | "status"
   | "dueDate"
-  | "estimatedPrice";
+  | "price";
 type SortOrder = "asc" | "desc";
 
 function Field({
@@ -223,7 +221,6 @@ export default function JobsPage() {
   // Pagamento collegato al lavoro nel modal dettaglio
   const [existingPayment, setExistingPayment] = useState<PaymentData | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [isPaymentSaving, setIsPaymentSaving] = useState(false);
@@ -395,7 +392,7 @@ export default function JobsPage() {
           type: newTipoLavoro,
           dueDate: newDataConsegna,
           description: newDescrizione || null,
-          estimatedPrice: newPrezzoStimato || null,
+          price: newPrezzoStimato || null,
           notes: newNote || null,
         }),
       });
@@ -423,7 +420,7 @@ export default function JobsPage() {
     setEditTipoLavoro(lavoro.typeRaw ?? "");
     setEditDataConsegna(lavoro.dueDate ?? "");
     setEditDescrizione(lavoro.description || "");
-    setEditPrezzoStimato(lavoro.estimatedPrice?.toString() || "");
+    setEditPrezzoStimato(lavoro.price?.toString() || "");
     setEditNote(lavoro.notes || "");
     setEditErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
     setIsModalOpen(false);
@@ -466,8 +463,7 @@ export default function JobsPage() {
           status: selectedLavoro!.statusRaw ?? "TODO",
           dueDate: editDataConsegna || null,
           description: editDescrizione || null,
-          estimatedPrice: editPrezzoStimato || null,
-          finalPrice: null,
+          price: editPrezzoStimato || null,
           notes: editNote || null,
         }),
       });
@@ -542,11 +538,9 @@ export default function JobsPage() {
 
   useEffect(() => {
     if (existingPayment) {
-      setPaymentAmount(String(existingPayment.amount));
       setPaymentStatus(existingPayment.status);
       setPaymentMethod(existingPayment.method ?? "");
     } else {
-      setPaymentAmount("");
       setPaymentStatus("UNPAID");
       setPaymentMethod("");
     }
@@ -560,15 +554,10 @@ export default function JobsPage() {
 
   async function savePayment() {
     if (!selectedLavoro) return;
-    const amount = Number(paymentAmount);
-    if (!paymentAmount || isNaN(amount) || amount <= 0) {
-      setPaymentError("Inserisci un importo valido (maggiore di zero).");
-      return;
-    }
     setPaymentError("");
     setIsPaymentSaving(true);
     try {
-      const body = { amount, status: paymentStatus, method: paymentMethod || null };
+      const body = { status: paymentStatus, method: paymentMethod || null };
       const res = existingPayment
         ? await fetch(`/api/pagamenti/${existingPayment.id}`, {
             method: "PUT",
@@ -617,8 +606,7 @@ export default function JobsPage() {
           status: REVERSE_STATUS_MAP[quickStatusValue] ?? quickStatusValue,
           dueDate: selectedLavoro.dueDate,
           description: selectedLavoro.description,
-          estimatedPrice: selectedLavoro.estimatedPrice,
-          finalPrice: selectedLavoro.finalPrice,
+          price: selectedLavoro.price,
           notes: selectedLavoro.notes,
         }),
       });
@@ -935,11 +923,11 @@ export default function JobsPage() {
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none whitespace-nowrap text-right"
-                  onClick={() => handleSort("estimatedPrice")}
+                  onClick={() => handleSort("price")}
                 >
                   Prezzo
                   <SortIndicator
-                    active={sortBy === "estimatedPrice"}
+                    active={sortBy === "price"}
                     order={sortOrder}
                   />
                 </TableHead>
@@ -983,7 +971,7 @@ export default function JobsPage() {
                   </TableCell>
                   <TableCell className="text-slate-600">{job.dueDate}</TableCell>
                   <TableCell className="text-right font-medium">
-                    {job.estimatedPrice != null ? `€ ${job.estimatedPrice}` : "—"}
+                    {job.price != null ? `€ ${job.price}` : "—"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -1070,16 +1058,8 @@ export default function JobsPage() {
                   value={selectedLavoro.dueDate}
                 />
                 <Field
-                  label="Prezzo stimato"
-                  value={selectedLavoro.estimatedPrice != null ? `€ ${selectedLavoro.estimatedPrice}` : null}
-                />
-                <Field
-                  label="Prezzo finale"
-                  value={
-                    selectedLavoro.finalPrice != null
-                      ? `€ ${selectedLavoro.finalPrice}`
-                      : null
-                  }
+                  label="Prezzo"
+                  value={selectedLavoro.price != null ? `€ ${selectedLavoro.price}` : null}
                 />
               </div>
               <div className="mt-4 space-y-4">
@@ -1198,26 +1178,14 @@ export default function JobsPage() {
                           ? "Acconto pagato"
                           : "Non pagato"}
                       </span>
-                      <span className="text-[13px] font-bold text-slate-900">
-                        {new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(existingPayment.amount)}
-                      </span>
+                      {selectedLavoro.price != null && (
+                        <span className="text-[13px] font-bold text-slate-900">
+                          {new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(selectedLavoro.price)}
+                        </span>
+                      )}
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Importo (€)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        placeholder="0.00"
-                        className={FIELD_CLASS}
-                      />
-                    </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Stato
@@ -1494,7 +1462,7 @@ export default function JobsPage() {
               {/* Prezzo stimato */}
               <div>
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Prezzo stimato (€)
+                  Prezzo (€)
                 </label>
                 <input
                   type="number"
@@ -1653,7 +1621,7 @@ export default function JobsPage() {
               {/* Prezzo stimato */}
               <div>
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Prezzo stimato (€)
+                  Prezzo (€)
                 </label>
                 <input
                   type="number"
