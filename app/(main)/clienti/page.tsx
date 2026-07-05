@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
@@ -13,13 +13,16 @@ import {
   Trash2,
   AlertTriangle,
   CheckCircle,
+  Check,
+  Users,
+  UserPlus,
+  Clock,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -41,6 +44,7 @@ type Cliente = {
   numeroLavori: number;
   lavoriAttivi: number;
   segmentiStato?: Record<string, number>;
+  daIncassare: number;
 };
 
 type LavoroStorico = {
@@ -74,13 +78,7 @@ type LavoroForm = {
   errors: { tipoLavoro: boolean; stato: boolean; dataConsegna: boolean; prezzo: boolean };
 };
 
-type SortKey =
-  | "nome"
-  | "cognome"
-  | "telefono"
-  | "citta"
-  | "lavoriAttivi"
-  | "numeroLavori";
+type SortKey = "nome" | "cognome" | "telefono" | "lavoriAttivi" | "numeroLavori";
 type SortOrder = "asc" | "desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -98,10 +96,13 @@ function formatDataIt(iso: string): string {
   return `${d} ${MESI_IT[m - 1]} ${y}`;
 }
 
+function formatEur(n: number): string {
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+}
+
 function emptyErrors(): FormErrors {
   return { nome: "", cognome: "", telefono: "", citta: "", email: "", duplicato: "" };
 }
-
 
 function getSegmenti(cliente: Cliente) {
   const s = cliente.segmentiStato ?? {};
@@ -113,7 +114,6 @@ function getSegmenti(cliente: Cliente) {
   return { completati, inCorso, daFare, annullati, totale };
 }
 
-
 // ─── Style constants ──────────────────────────────────────────────────────────
 
 const FIELD_CLASS =
@@ -124,23 +124,25 @@ const TEXTAREA_CLASS =
   "w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 const SELECT_CLASS =
   "h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60 cursor-pointer";
+const INLINE_INPUT_CLASS =
+  "flex-1 rounded border border-amber-400 bg-amber-50/40 px-2 py-0.5 text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400/50";
 
 const STATUS_COLORS: Record<string, string> = {
-  "Da iniziare":      "bg-stone-200 text-stone-700",
-  "In lavorazione":   "bg-blue-100 text-blue-700",
-  "In attesa cliente":"bg-orange-100 text-orange-700",
-  Pronto:             "bg-green-100 text-green-700",
-  Consegnato:         "bg-emerald-200 text-emerald-800",
-  Annullato:          "bg-red-100 text-red-700",
+  "Da iniziare":       "bg-stone-200 text-stone-700",
+  "In lavorazione":    "bg-blue-100 text-blue-700",
+  "In attesa cliente": "bg-orange-100 text-orange-700",
+  Pronto:              "bg-green-100 text-green-700",
+  Consegnato:          "bg-emerald-200 text-emerald-800",
+  Annullato:           "bg-red-100 text-red-700",
 };
 
 const STATUS_MAP: Record<string, string> = {
-  TODO: "Da iniziare",
-  IN_PROGRESS: "In lavorazione",
+  TODO:             "Da iniziare",
+  IN_PROGRESS:      "In lavorazione",
   WAITING_CUSTOMER: "In attesa cliente",
-  COMPLETED: "Pronto",
-  DELIVERED: "Consegnato",
-  CANCELLED: "Annullato",
+  COMPLETED:        "Pronto",
+  DELIVERED:        "Consegnato",
+  CANCELLED:        "Annullato",
 };
 
 const TIPO_LAVORO_TO_ENUM: Record<string, string> = {
@@ -154,7 +156,6 @@ const TIPO_LAVORO_TO_ENUM: Record<string, string> = {
   "Altro":              "OTHER",
 };
 
-const PAGE_SIZE = 10;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -179,18 +180,26 @@ export default function ClientiPage() {
   // ── List state ────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStato, setFilterStato] = useState("");
-  const [filterCitta, setFilterCitta] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("numeroLavori");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // ── Modal state ───────────────────────────────────────────────────────────────
   const [isMounted, setIsMounted] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  // ── Inline editing state ──────────────────────────────────────────────────────
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [editingValue2, setEditingValue2] = useState("");
+  const [isSavingField, setIsSavingField] = useState(false);
+  const [fieldError, setFieldError] = useState("");
+  const [nomeInputWidth, setNomeInputWidth] = useState(48);
+  const [cognomeInputWidth, setCognomeInputWidth] = useState(48);
+  const nomeMeasureRef = useRef<HTMLSpanElement>(null);
+  const cognomeMeasureRef = useRef<HTMLSpanElement>(null);
 
   // ── Banner ────────────────────────────────────────────────────────────────────
   const [showBanner, setShowBanner] = useState(false);
@@ -214,16 +223,6 @@ export default function ClientiPage() {
   const [maxCodiceDB, setMaxCodiceDB] = useState<number>(0);
   const [loadingCodice, setLoadingCodice] = useState(false);
 
-  // ── Edit form ─────────────────────────────────────────────────────────────────
-  const [editNome, setEditNome] = useState("");
-  const [editCognome, setEditCognome] = useState("");
-  const [editTelefono, setEditTelefono] = useState("");
-  const [editCitta, setEditCitta] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editNote, setEditNote] = useState("");
-  const [editErrors, setEditErrors] = useState<FormErrors>(emptyErrors());
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
   // ── Storico lavori del cliente selezionato (da API) ───────────────────────────
   const [clienteLavori, setClienteLavori] = useState<LavoroStorico[]>([]);
   const [clienteLavoriLoading, setClienteLavoriLoading] = useState(false);
@@ -231,9 +230,7 @@ export default function ClientiPage() {
 
   // ── Effects ───────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
     async function caricaClienti() {
@@ -254,24 +251,22 @@ export default function ClientiPage() {
   }, []);
 
   useEffect(() => {
-    const anyOpen = isDetailOpen || isNewOpen || isEditOpen || isDeleteOpen;
+    const anyOpen = isDetailOpen || isNewOpen || isDeleteOpen;
     document.body.style.overflow = anyOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isDetailOpen, isNewOpen, isEditOpen, isDeleteOpen]);
+    return () => { document.body.style.overflow = ""; };
+  }, [isDetailOpen, isNewOpen, isDeleteOpen]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       if (isDeleteOpen) { setIsDeleteOpen(false); return; }
-      if (isEditOpen) { setIsEditOpen(false); resetEditForm(); return; }
+      if (editingField) { cancelEditing(); return; }
       if (isNewOpen) { setIsNewOpen(false); resetNewForm(); return; }
       if (isDetailOpen) { setIsDetailOpen(false); }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isDeleteOpen, isEditOpen, isNewOpen, isDetailOpen]);
+  }, [isDeleteOpen, editingField, isNewOpen, isDetailOpen]);
 
   useEffect(() => {
     if (!isNewOpen) return;
@@ -289,6 +284,22 @@ export default function ClientiPage() {
       .catch(() => {})
       .finally(() => setLoadingCodice(false));
   }, [isNewOpen]);
+
+  // ── Misurazione larghezza input Nome/Cognome ──────────────────────────────────
+
+  useLayoutEffect(() => {
+    if (nomeMeasureRef.current && editingField === "nome_cognome") {
+      const w = nomeMeasureRef.current.getBoundingClientRect().width;
+      setNomeInputWidth(Math.max(w + 24, 48));
+    }
+  }, [editingValue, editingField]);
+
+  useLayoutEffect(() => {
+    if (cognomeMeasureRef.current && editingField === "nome_cognome") {
+      const w = cognomeMeasureRef.current.getBoundingClientRect().width;
+      setCognomeInputWidth(Math.max(w + 24, 48));
+    }
+  }, [editingValue2, editingField]);
 
   // ── Filtered + sorted list ────────────────────────────────────────────────────
 
@@ -321,10 +332,6 @@ export default function ClientiPage() {
       }
     }
 
-    if (filterCitta) {
-      result = result.filter((c) => c.citta === filterCitta);
-    }
-
     result.sort((a, b) => {
       const valA = a[sortBy];
       const valB = b[sortBy];
@@ -338,7 +345,7 @@ export default function ClientiPage() {
     });
 
     return result;
-  }, [clienti, searchQuery, filterStato, filterCitta, sortBy, sortOrder]);
+  }, [clienti, searchQuery, filterStato, sortBy, sortOrder]);
 
   // ── Detail stats ──────────────────────────────────────────────────────────────
 
@@ -379,6 +386,7 @@ export default function ClientiPage() {
     setClienteLavori([]);
     setClienteLavoriError(null);
     setClienteLavoriLoading(true);
+    cancelEditing();
 
     try {
       const res = await fetch(`/api/clienti/${cliente.id}`);
@@ -403,11 +411,104 @@ export default function ClientiPage() {
       }));
 
       setClienteLavori(lavoriMappati);
-    } catch (error) {
-      console.error("Errore fetch lavori cliente:", error);
+    } catch (err) {
+      console.error("Errore fetch lavori cliente:", err);
       setClienteLavoriError("Impossibile caricare lo storico lavori");
     } finally {
       setClienteLavoriLoading(false);
+    }
+  }
+
+  // ── Inline field editing ──────────────────────────────────────────────────────
+
+  function startEditing(field: string, currentValue: string) {
+    setEditingField(field);
+    setEditingValue(currentValue);
+    setFieldError("");
+  }
+
+  function cancelEditing() {
+    setEditingField(null);
+    setEditingValue("");
+    setEditingValue2("");
+    setFieldError("");
+  }
+
+  async function saveField(field: string) {
+    if (!selectedCliente) return;
+    const value = editingValue.trim();
+    const value2 = editingValue2.trim();
+
+    if (field === "nome_cognome") {
+      if (!value) { setFieldError("Nome obbligatorio"); return; }
+      if (!value2) { setFieldError("Cognome obbligatorio"); return; }
+      const dup = clienti.some(
+        (c) =>
+          c.id !== selectedCliente.id &&
+          c.nome.trim().toLowerCase() === value.toLowerCase() &&
+          c.cognome.trim().toLowerCase() === value2.toLowerCase()
+      );
+      if (dup) { setFieldError("Esiste già un cliente con questo nome e cognome"); return; }
+    }
+
+    if (field === "nome" && !value) { setFieldError("Campo obbligatorio"); return; }
+    if (field === "cognome" && !value) { setFieldError("Campo obbligatorio"); return; }
+    if (field === "telefono") {
+      if (!value) { setFieldError("Campo obbligatorio"); return; }
+      if (!/^[0-9\s\-()+]+$/.test(value) || value.replace(/\D/g, "").length < 7) {
+        setFieldError("Inserisci un numero di telefono valido"); return;
+      }
+    }
+    if (field === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setFieldError("Inserisci un'email valida"); return;
+    }
+
+    if (field === "nome" || field === "cognome") {
+      const n = field === "nome" ? value : selectedCliente.nome;
+      const cog = field === "cognome" ? value : selectedCliente.cognome;
+      const dup = clienti.some(
+        (c) =>
+          c.id !== selectedCliente.id &&
+          c.nome.trim().toLowerCase() === n.toLowerCase() &&
+          c.cognome.trim().toLowerCase() === cog.toLowerCase()
+      );
+      if (dup) { setFieldError("Esiste già un cliente con questo nome e cognome"); return; }
+    }
+
+    setIsSavingField(true);
+    try {
+      const payload = {
+        nome:     field === "nome_cognome" ? value  : (field === "nome"     ? value           : selectedCliente.nome),
+        cognome:  field === "nome_cognome" ? value2 : (field === "cognome"  ? value           : selectedCliente.cognome),
+        telefono: field === "telefono" ? value           : selectedCliente.telefono,
+        email:    field === "email"    ? (value || null) : selectedCliente.email,
+        citta:    field === "citta"    ? (value || null) : selectedCliente.citta,
+        note:     field === "note"     ? (value || null) : selectedCliente.note,
+      };
+
+      const res = await fetch(`/api/clienti/${selectedCliente.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella modifica");
+      }
+
+      const aggiornato: Cliente = {
+        ...selectedCliente,
+        ...payload,
+      };
+      setClienti((prev) => prev.map((c) => (c.id === aggiornato.id ? aggiornato : c)));
+      setSelectedCliente(aggiornato);
+      cancelEditing();
+      showSuccess("Modificato con successo");
+    } catch (err) {
+      setFieldError(err instanceof Error ? err.message : "Errore nella modifica");
+    } finally {
+      setIsSavingField(false);
     }
   }
 
@@ -457,10 +558,10 @@ export default function ClientiPage() {
     let lavoriValidi = true;
     const updatedLavori = newLavori.map((lav) => {
       const lavErrs = {
-        tipoLavoro: !lav.tipoLavoro,
-        stato: !lav.stato,
+        tipoLavoro:   !lav.tipoLavoro,
+        stato:        !lav.stato,
         dataConsegna: !lav.dataConsegna,
-        prezzo: !lav.prezzo || isNaN(parseFloat(lav.prezzo)),
+        prezzo:       !lav.prezzo || isNaN(parseFloat(lav.prezzo)),
       };
       if (lavErrs.tipoLavoro || lavErrs.stato || lavErrs.dataConsegna || lavErrs.prezzo) lavoriValidi = false;
       return { ...lav, errors: lavErrs };
@@ -483,12 +584,8 @@ export default function ClientiPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nome: newNome,
-          cognome: newCognome,
-          telefono: newTelefono,
-          email: newEmail || null,
-          citta: newCitta || null,
-          note: newNote || null,
+          nome: newNome, cognome: newCognome, telefono: newTelefono,
+          email: newEmail || null, citta: newCitta || null, note: newNote || null,
         }),
       });
 
@@ -513,137 +610,31 @@ export default function ClientiPage() {
                 price: lav.prezzo || null,
               }),
             }).then(async (r) => {
-              if (!r.ok) {
-                const err = await r.json();
-                throw new Error(err.error ?? "Lavoro non salvato");
-              }
+              if (!r.ok) { const err = await r.json(); throw new Error(err.error ?? "Lavoro non salvato"); }
               return r.json();
             })
           )
         );
-
         const falliti = risultati.filter((r) => r.status === "rejected").length;
-        setClienti((prev) => [clienteCreato, ...prev]);
-        setIsNewOpen(false);
-        resetNewForm();
-        showSuccess(
-          falliti > 0
-            ? `Cliente creato, ma ${falliti} lavoro/i pregressi non salvati — aggiungili dalla pagina Lavori.`
-            : "Cliente e lavori pregressi aggiunti con successo"
-        );
+        setClienti((prev) => [{ ...clienteCreato, daIncassare: 0 }, ...prev]);
+        setIsNewOpen(false); resetNewForm();
+        showSuccess(falliti > 0
+          ? `Cliente creato, ma ${falliti} lavoro/i pregressi non salvati — aggiungili dalla pagina Lavori.`
+          : "Cliente e lavori pregressi aggiunti con successo");
         return;
       }
 
-      setClienti((prev) => [clienteCreato, ...prev]);
-      setIsNewOpen(false);
-      resetNewForm();
+      setClienti((prev) => [{ ...clienteCreato, daIncassare: 0 }, ...prev]);
+      setIsNewOpen(false); resetNewForm();
       showSuccess("Cliente aggiunto con successo");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setNewErrors((prev) => ({
         ...prev,
-        duplicato: error instanceof Error ? error.message : "Errore nella creazione del cliente",
+        duplicato: err instanceof Error ? err.message : "Errore nella creazione del cliente",
       }));
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  // ── Edit form handlers ────────────────────────────────────────────────────────
-
-  function resetEditForm() {
-    setEditNome(""); setEditCognome(""); setEditTelefono("");
-    setEditCitta(""); setEditEmail(""); setEditNote("");
-    setEditErrors(emptyErrors());
-  }
-
-  function openEditFromDetail() {
-    if (!selectedCliente) return;
-    setEditNome(selectedCliente.nome);
-    setEditCognome(selectedCliente.cognome);
-    setEditTelefono(selectedCliente.telefono);
-    setEditCitta(selectedCliente.citta ?? "");
-    setEditEmail(selectedCliente.email ?? "");
-    setEditNote(selectedCliente.note ?? "");
-    setEditErrors(emptyErrors());
-    setIsDetailOpen(false);
-    setIsEditOpen(true);
-  }
-
-  function validateEdit(): boolean {
-    const errs = emptyErrors();
-    let ok = true;
-
-    if (!editNome.trim()) { errs.nome = "Campo obbligatorio"; ok = false; }
-    if (!editCognome.trim()) { errs.cognome = "Campo obbligatorio"; ok = false; }
-
-    const tel = editTelefono.trim();
-    if (!tel) {
-      errs.telefono = "Campo obbligatorio"; ok = false;
-    } else if (!/^[0-9\s\-]+$/.test(tel) || tel.replace(/\D/g, "").length < 7) {
-      errs.telefono = "Inserisci un numero di telefono valido"; ok = false;
-    }
-
-    if (!editCitta.trim()) { errs.citta = "Campo obbligatorio"; ok = false; }
-
-    const mail = editEmail.trim();
-    if (!mail) {
-      errs.email = "Campo obbligatorio"; ok = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
-      errs.email = "Inserisci un'email valida"; ok = false;
-    }
-
-    if (ok) {
-      const n = editNome.trim().toLowerCase();
-      const cog = editCognome.trim().toLowerCase();
-      if (clienti.some((c) => c.id !== selectedCliente?.id && c.nome.trim().toLowerCase() === n && c.cognome.trim().toLowerCase() === cog)) {
-        errs.duplicato = "Esiste già un cliente con questo nome e cognome"; ok = false;
-      }
-    }
-
-    setEditErrors(errs);
-    return ok;
-  }
-
-  async function handleEditSubmit() {
-    if (!validateEdit() || !selectedCliente) return;
-
-    setIsEditSubmitting(true);
-    try {
-      const res = await fetch(`/api/clienti/${selectedCliente.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: editNome,
-          cognome: editCognome,
-          telefono: editTelefono,
-          email: editEmail || null,
-          citta: editCitta || null,
-          note: editNote || null,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Errore nella modifica");
-      }
-
-      const clienteAggiornato = await res.json();
-      setClienti((prev) =>
-        prev.map((c) => (c.id === clienteAggiornato.id ? clienteAggiornato : c))
-      );
-      setSelectedCliente(clienteAggiornato);
-      setIsEditOpen(false);
-      resetEditForm();
-      showSuccess("Cliente modificato con successo");
-    } catch (error) {
-      console.error(error);
-      setEditErrors((prev) => ({
-        ...prev,
-        duplicato: error instanceof Error ? error.message : "Errore nella modifica del cliente",
-      }));
-    } finally {
-      setIsEditSubmitting(false);
     }
   }
 
@@ -661,12 +652,7 @@ export default function ClientiPage() {
       ...prev,
       {
         localId: lavoroCounter.current,
-        codiceLavoro,
-        tipoLavoro: "",
-        stato: "",
-        dataConsegna: "",
-        prezzo: "",
-        descrizione: "",
+        codiceLavoro, tipoLavoro: "", stato: "", dataConsegna: "", prezzo: "", descrizione: "",
         expanded: false,
         errors: { tipoLavoro: false, stato: false, dataConsegna: false, prezzo: false },
       },
@@ -691,53 +677,136 @@ export default function ClientiPage() {
 
   // ── Delete handler ────────────────────────────────────────────────────────────
 
-  function openDeleteFromEdit() {
-    setIsEditOpen(false);
-    setIsDeleteOpen(true);
-  }
-
   async function handleDelete() {
     if (!selectedCliente) return;
-
     try {
-      const res = await fetch(`/api/clienti/${selectedCliente.id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Errore nell'eliminazione");
-      }
-
+      const res = await fetch(`/api/clienti/${selectedCliente.id}`, { method: "DELETE" });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Errore nell'eliminazione"); }
       setClienti((prev) => prev.filter((c) => c.id !== selectedCliente.id));
       setIsDeleteOpen(false);
+      setIsDetailOpen(false);
       setSelectedCliente(null);
       showSuccess("Cliente eliminato");
-    } catch (error) {
-      console.error(error);
-      alert((error as Error).message);
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
     }
   }
 
+  // ── Inline field render helper (called as function, not JSX component) ────────
+
+  function renderInlineField(
+    fieldKey: string,
+    label: string,
+    displayNode: React.ReactNode,
+    currentValue: string,
+    inputType = "text"
+  ) {
+    const isEditing = editingField === fieldKey;
+    return (
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        {isEditing ? (
+          <div className="mt-1">
+            <div className="flex items-center gap-1.5">
+              <input
+                autoFocus
+                type={inputType}
+                value={editingValue}
+                onChange={(e) => setEditingValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveField(fieldKey); }}
+                className={INLINE_INPUT_CLASS}
+              />
+              <button
+                onClick={() => saveField(fieldKey)}
+                disabled={isSavingField}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isSavingField
+                  ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  : <Check className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                onClick={cancelEditing}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-300 text-slate-500 hover:bg-slate-50"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {fieldError && editingField === fieldKey && (
+              <p className="mt-1 text-[12px] text-red-500">{fieldError}</p>
+            )}
+          </div>
+        ) : (
+          <div className="group mt-0.5 flex items-center gap-1.5">
+            {displayNode}
+            <button
+              onClick={() => startEditing(fieldKey, currentValue)}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-amber-600 group-hover:opacity-100"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── KPI cards ────────────────────────────────────────────────────────────────
+
+  const kpiClienti = useMemo(() => {
+    const now = new Date();
+    const meseCorrente = now.getMonth();
+    const annoCorrente = now.getFullYear();
+    return {
+      totale: clienti.length,
+      nuoviMese: clienti.filter((c) => {
+        const d = new Date(c.dataRegistrazione);
+        return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente;
+      }).length,
+      senzaLavoriAttivi: clienti.filter((c) => c.lavoriAttivi === 0).length,
+    };
+  }, [clienti]);
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
-  const visibleClienti = filteredAndSorted.slice(0, visibleCount);
-  const remaining = filteredAndSorted.length - visibleCount;
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-3rem)] flex-col gap-6">
       <PageHeader
         title="Clienti"
         description="Gestisci l'anagrafica dei clienti del laboratorio."
       />
 
-      <Card>
-        <CardHeader className="pb-0">
+      <section className="grid shrink-0 grid-cols-3 gap-3.5">
+        {[
+          { label: "Clienti totali",              value: kpiClienti.totale,           Icon: Users    },
+          { label: "Nuovi questo mese",            value: kpiClienti.nuoviMese,        Icon: UserPlus },
+          { label: "Senza lavori attivi",          value: kpiClienti.senzaLavoriAttivi, Icon: Clock   },
+        ].map(({ label, value, Icon }) => (
+          <Card key={label} className="relative overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/60" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+            <CardContent className="relative flex items-center gap-4 p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/80 text-amber-700 ring-1 ring-amber-200/50">
+                <Icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400/80">{label}</p>
+                <p className="text-[26px] font-bold tracking-[-0.04em] text-slate-900">{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      <Card className="flex flex-col flex-1 min-h-0">
+        <CardHeader className="pb-0 shrink-0">
           <CardTitle className="text-slate-800">Archivio clienti</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex flex-col flex-1 min-h-0 p-0">
           {/* Barra filtri */}
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5 shrink-0">
             <div className="flex min-w-[260px] flex-1 flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">Cerca</label>
               <div className="relative">
@@ -767,20 +836,6 @@ export default function ClientiPage() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">Città</label>
-              <select
-                value={filterCitta}
-                onChange={(e) => setFilterCitta(e.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="">Tutte</option>
-                {Array.from(new Set(clienti.map((c) => c.citta).filter((c): c is string => c !== null))).sort().map((citta) => (
-                  <option key={citta} value={citta}>{citta}</option>
-                ))}
-              </select>
-            </div>
-
             <div className="ml-auto flex items-end">
               <Button
                 className="bg-amber-600 text-white hover:bg-amber-700"
@@ -793,8 +848,9 @@ export default function ClientiPage() {
           </div>
 
           {/* Tabella */}
-          <Table>
-            <TableHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+          <table className="w-full caption-bottom text-[13px]">
+            <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
                 <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("nome")}>
                   Nome <SortIndicator active={sortBy === "nome"} order={sortOrder} />
@@ -805,10 +861,10 @@ export default function ClientiPage() {
                 <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("telefono")}>
                   Telefono <SortIndicator active={sortBy === "telefono"} order={sortOrder} />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("citta")}>
-                  Città <SortIndicator active={sortBy === "citta"} order={sortOrder} />
+                <TableHead className="whitespace-nowrap">
+                  Stato pagamenti
                 </TableHead>
-                <TableHead className="cursor-pointer select-none whitespace-nowrap min-w-[200px]" onClick={() => handleSort("numeroLavori")}>
+                <TableHead className="min-w-[200px] cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("numeroLavori")}>
                   Lavori <SortIndicator active={sortBy === "numeroLavori"} order={sortOrder} />
                 </TableHead>
               </TableRow>
@@ -828,7 +884,7 @@ export default function ClientiPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && !error && visibleClienti.map((cliente) => (
+              {!loading && !error && filteredAndSorted.map((cliente) => (
                 <TableRow
                   key={cliente.id}
                   className="cursor-pointer hover:bg-amber-50"
@@ -837,34 +893,34 @@ export default function ClientiPage() {
                   <TableCell className="font-medium text-slate-800">{cliente.nome}</TableCell>
                   <TableCell className="text-slate-700">{cliente.cognome}</TableCell>
                   <TableCell className="font-mono text-[12px] text-slate-600">{cliente.telefono}</TableCell>
-                  <TableCell className="text-slate-700">{cliente.citta}</TableCell>
+                  <TableCell>
+                    {cliente.daIncassare === 0 ? (
+                      <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] font-medium text-green-800">
+                        In regola
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+                        Da incassare — {formatEur(cliente.daIncassare)}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="min-w-[200px]">
                     {(() => {
                       const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente);
                       if (totale === 0) return <span className="text-slate-400">—</span>;
                       return (
                         <div className="flex items-center gap-3">
-                          <span className="shrink-0 text-sm text-slate-700">
-                            {totale}
-                          </span>
+                          <span className="shrink-0 text-sm text-slate-700">{totale}</span>
                           <div
                             className="flex flex-1 items-center gap-1 pr-4"
                             onMouseEnter={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
                             onMouseMove={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
                             onMouseLeave={() => setTooltipData(null)}
                           >
-                            {completati > 0 && (
-                              <div className="h-2 rounded-full bg-green-400" style={{ width: `${(completati / totale) * 100}%`, minWidth: "8px" }} />
-                            )}
-                            {inCorso > 0 && (
-                              <div className="h-2 rounded-full bg-amber-400" style={{ width: `${(inCorso / totale) * 100}%`, minWidth: "8px" }} />
-                            )}
-                            {daFare > 0 && (
-                              <div className="h-2 rounded-full bg-stone-300" style={{ width: `${(daFare / totale) * 100}%`, minWidth: "8px" }} />
-                            )}
-                            {annullati > 0 && (
-                              <div className="h-2 rounded-full bg-red-400" style={{ width: `${(annullati / totale) * 100}%`, minWidth: "8px" }} />
-                            )}
+                            {completati > 0 && <div className="h-2 rounded-full bg-green-400"  style={{ width: `${(completati / totale) * 100}%`, minWidth: "8px" }} />}
+                            {inCorso   > 0 && <div className="h-2 rounded-full bg-amber-400"  style={{ width: `${(inCorso   / totale) * 100}%`, minWidth: "8px" }} />}
+                            {daFare    > 0 && <div className="h-2 rounded-full bg-stone-300"  style={{ width: `${(daFare    / totale) * 100}%`, minWidth: "8px" }} />}
+                            {annullati > 0 && <div className="h-2 rounded-full bg-red-400"    style={{ width: `${(annullati / totale) * 100}%`, minWidth: "8px" }} />}
                           </div>
                         </div>
                       );
@@ -872,7 +928,7 @@ export default function ClientiPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {!loading && !error && visibleClienti.length === 0 && (
+              {!loading && !error && filteredAndSorted.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-10 text-center text-slate-400">
                     Nessun cliente trovato. Prova a modificare i filtri.
@@ -880,28 +936,12 @@ export default function ClientiPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
-
-          {/* Carica altri */}
-          <div className="border-t border-slate-100 py-4 text-center">
-            {remaining > 0 ? (
-              <p className="text-sm text-slate-500">
-                Mostrati {visibleClienti.length} di {filteredAndSorted.length} clienti{"  "}
-                <button
-                  className="font-medium text-amber-600 hover:underline"
-                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                >
-                  Carica altri
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400">Tutti i clienti sono visualizzati</p>
-            )}
+          </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* ══ Tooltip lavori (segue il mouse) ═════════════════════════════════════ */}
+      {/* ══ Tooltip lavori ════════════════════════════════════════════════════════ */}
       {tooltipData && (() => {
         const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente);
         return (
@@ -909,35 +949,15 @@ export default function ClientiPage() {
             style={{ position: "fixed", left: tooltipData.x + 12, top: tooltipData.y + 12, pointerEvents: "none", zIndex: 50 }}
             className="whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-xs text-white shadow-lg"
           >
-            {completati > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-400" />
-                Consegnati: {completati}
-              </div>
-            )}
-            {inCorso > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                In corso: {inCorso}
-              </div>
-            )}
-            {daFare > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-stone-300" />
-                Da iniziare: {daFare}
-              </div>
-            )}
-            {annullati > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-400" />
-                Annullati: {annullati}
-              </div>
-            )}
+            {completati > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-400" />Consegnati: {completati}</div>}
+            {inCorso    > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />In corso: {inCorso}</div>}
+            {daFare     > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-stone-300" />Da iniziare: {daFare}</div>}
+            {annullati  > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400"   />Annullati: {annullati}</div>}
           </div>
         );
       })()}
 
-      {/* ══ Banner successo ══════════════════════════════════════════════════════ */}
+      {/* ══ Banner successo ═══════════════════════════════════════════════════════ */}
       {isMounted && showBanner && createPortal(
         <div className="fixed right-4 top-4 z-[500] flex items-center gap-3 rounded-xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-green-50/40 px-4 py-3 shadow-md">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
@@ -948,11 +968,11 @@ export default function ClientiPage() {
         document.body
       )}
 
-      {/* ══ Modal dettaglio cliente ══════════════════════════════════════════════ */}
+      {/* ══ Modal dettaglio cliente ═══════════════════════════════════════════════ */}
       {isMounted && isDetailOpen && selectedCliente && detailStats && createPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setIsDetailOpen(false)}
+          onClick={() => { setIsDetailOpen(false); cancelEditing(); }}
         >
           <div
             className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
@@ -960,27 +980,90 @@ export default function ClientiPage() {
           >
             {/* Header */}
             <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-5">
-              <div>
-                <h2 className="text-[22px] font-bold tracking-[-0.03em] text-slate-800">
-                  {selectedCliente.nome} {selectedCliente.cognome}
-                </h2>
+              <div className="min-w-0 flex-1 pr-4">
+                {editingField === "nome_cognome" ? (
+                  <div>
+                    {/* Span nascosti per misurazione reale larghezza testo */}
+                    <span
+                      ref={nomeMeasureRef}
+                      aria-hidden="true"
+                      className="invisible absolute whitespace-pre text-[20px] font-bold"
+                    >
+                      {editingValue || " "}
+                    </span>
+                    <span
+                      ref={cognomeMeasureRef}
+                      aria-hidden="true"
+                      className="invisible absolute whitespace-pre text-[20px] font-bold"
+                    >
+                      {editingValue2 || " "}
+                    </span>
+                    <div className="flex max-w-full flex-wrap items-center gap-2 min-w-0">
+                      <div className="flex min-w-0 flex-wrap gap-2">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveField("nome_cognome"); }}
+                          placeholder="Nome"
+                          style={{ width: `${nomeInputWidth}px` }}
+                          className="min-w-0 shrink rounded border border-amber-400 bg-amber-50/40 px-2 py-0.5 text-[20px] font-bold text-slate-800 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={editingValue2}
+                          onChange={(e) => setEditingValue2(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveField("nome_cognome"); }}
+                          placeholder="Cognome"
+                          style={{ width: `${cognomeInputWidth}px` }}
+                          className="min-w-0 shrink rounded border border-amber-400 bg-amber-50/40 px-2 py-0.5 text-[20px] font-bold text-slate-800 focus:outline-none"
+                        />
+                      </div>
+                      <button onClick={() => saveField("nome_cognome")} disabled={isSavingField}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+                        {isSavingField ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="h-3.5 w-3.5" />}
+                      </button>
+                      <button onClick={cancelEditing}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-300 text-slate-500 hover:bg-slate-50">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {fieldError && <p className="mt-0.5 text-[12px] text-red-500">{fieldError}</p>}
+                  </div>
+                ) : (
+                  <div className="group flex max-w-full flex-wrap items-center gap-2 min-w-0">
+                    <h2 className="min-w-0 break-words text-[22px] font-bold tracking-[-0.03em] text-slate-800">
+                      {selectedCliente.nome} {selectedCliente.cognome}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setEditingField("nome_cognome");
+                        setEditingValue(selectedCliente.nome);
+                        setEditingValue2(selectedCliente.cognome);
+                        setFieldError("");
+                      }}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-amber-600 group-hover:opacity-100"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
                 <p className="mt-0.5 text-[13px] text-slate-500">
                   Cliente dal {formatDataIt(selectedCliente.dataRegistrazione)}
                 </p>
               </div>
-              <div className="ml-4 flex shrink-0 items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-amber-600 text-amber-700 hover:bg-amber-50"
-                  onClick={openEditFromDetail}
+              <div className="ml-4 flex shrink-0 items-center gap-1.5">
+                <button
+                  onClick={() => setIsDeleteOpen(true)}
+                  title="Elimina cliente"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
                 >
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                  Modifica
-                </Button>
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <button
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                  onClick={() => setIsDetailOpen(false)}
+                  onClick={() => { setIsDetailOpen(false); cancelEditing(); }}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -994,13 +1077,11 @@ export default function ClientiPage() {
                 {[
                   { label: "Lavori totali", value: String(selectedCliente.numeroLavori), amber: false },
                   { label: "Lavori attivi", value: String(selectedCliente.lavoriAttivi), amber: selectedCliente.lavoriAttivi > 0 },
-                  { label: "Totale speso",  value: `€ ${detailStats.totaleSpeso}`,       amber: false },
-                  { label: "Da incassare",  value: `€ ${detailStats.daIncassare}`,        amber: false },
+                  { label: "Totale speso",  value: formatEur(detailStats.totaleSpeso),  amber: false },
+                  { label: "Da incassare",  value: formatEur(detailStats.daIncassare),  amber: detailStats.daIncassare > 0 },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      {s.label}
-                    </p>
+                  <div key={s.label} className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{s.label}</p>
                     <p className={`mt-1 text-[20px] font-bold tracking-[-0.03em] ${s.amber ? "text-amber-700" : "text-slate-800"}`}>
                       {s.value}
                     </p>
@@ -1010,49 +1091,77 @@ export default function ClientiPage() {
 
               {/* Contatti */}
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Contatti
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Telefono</p>
-                    <a
-                      href={`tel:${selectedCliente.telefono}`}
-                      className="font-mono text-[13px] font-medium text-amber-700 hover:underline"
-                    >
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Contatti</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderInlineField(
+                    "telefono", "Telefono",
+                    <a href={`tel:${selectedCliente.telefono}`} className="font-mono text-[13px] font-medium text-amber-700 hover:underline">
                       {selectedCliente.telefono}
-                    </a>
-                  </div>
-                  {selectedCliente.citta && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Città</p>
-                      <p className="text-[13px] font-medium text-slate-700">{selectedCliente.citta}</p>
-                    </div>
+                    </a>,
+                    selectedCliente.telefono, "tel"
                   )}
-                  {selectedCliente.email && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Email</p>
-                      <a
-                        href={`mailto:${selectedCliente.email}`}
-                        className="text-[13px] font-medium text-amber-700 hover:underline"
-                      >
-                        {selectedCliente.email}
-                      </a>
-                    </div>
+                  {renderInlineField(
+                    "email", "Email",
+                    selectedCliente.email
+                      ? <a href={`mailto:${selectedCliente.email}`} className="text-[13px] font-medium text-amber-700 hover:underline">{selectedCliente.email}</a>
+                      : <span className="text-[13px] text-slate-400">—</span>,
+                    selectedCliente.email ?? "", "email"
+                  )}
+                  {renderInlineField(
+                    "citta", "Città",
+                    <span className={`text-[13px] font-medium ${selectedCliente.citta ? "text-slate-700" : "text-slate-400"}`}>
+                      {selectedCliente.citta || "—"}
+                    </span>,
+                    selectedCliente.citta ?? ""
                   )}
                 </div>
               </div>
 
-              {/* Note — solo se presenti */}
-              {selectedCliente.note && (
-                <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Note</p>
-                  <p className="text-[13px] text-slate-700">{selectedCliente.note}</p>
-                </div>
-              )}
+              {/* Note */}
+              <div>
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Note</p>
+                {editingField === "note" ? (
+                  <div>
+                    <div className="flex items-start gap-1.5">
+                      <textarea
+                        autoFocus
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        rows={3}
+                        className="flex-1 resize-none rounded border border-amber-400 bg-amber-50/40 px-2 py-1 text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                      />
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => saveField("note")} disabled={isSavingField}
+                          className="flex h-6 w-6 items-center justify-center rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+                          {isSavingField ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="h-3.5 w-3.5" />}
+                        </button>
+                        <button onClick={cancelEditing}
+                          className="flex h-6 w-6 items-center justify-center rounded border border-slate-300 text-slate-500 hover:bg-slate-50">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    {fieldError && editingField === "note" && (
+                      <p className="mt-1 text-[12px] text-red-500">{fieldError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="group flex items-start gap-1.5">
+                    <p className={`text-[13px] ${selectedCliente.note ? "text-slate-700" : "text-slate-400"}`}>
+                      {selectedCliente.note || "Nessuna nota"}
+                    </p>
+                    <button
+                      onClick={() => startEditing("note", selectedCliente.note ?? "")}
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-amber-600 group-hover:opacity-100"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Storico lavori */}
-              <div>
+              <div className="border-t-2 border-stone-200 pt-6">
                 <p className="mb-3 text-[15px] font-semibold text-slate-800">Storico lavori</p>
                 {clienteLavoriLoading ? (
                   <p className="text-center text-[13px] text-slate-500">Caricamento...</p>
@@ -1085,7 +1194,7 @@ export default function ClientiPage() {
                               </span>
                             </td>
                             <td className="py-2 text-slate-500">{lav.dataConsegna ? formatDataIt(lav.dataConsegna) : "—"}</td>
-                            <td className="py-2 text-right font-medium text-slate-700">€ {lav.prezzo}</td>
+                            <td className="py-2 text-right font-medium text-slate-700">{formatEur(lav.prezzo)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1094,20 +1203,21 @@ export default function ClientiPage() {
                 )}
               </div>
 
-              {/* Link lavori */}
-              <a
-                href="/lavori"
-                className="block text-[13px] font-medium text-amber-700 hover:underline"
-              >
-                Gestisci i lavori di {selectedCliente.nome} {selectedCliente.cognome} →
-              </a>
+              <div className="flex justify-center">
+                <a
+                  href="/lavori"
+                  className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-amber-700"
+                >
+                  Gestisci i lavori di {selectedCliente.nome} {selectedCliente.cognome}
+                </a>
+              </div>
             </div>
           </div>
         </div>,
         document.body
       )}
 
-      {/* ══ Modal nuovo cliente ══════════════════════════════════════════════════ */}
+      {/* ══ Modal nuovo cliente ════════════════════════════════════════════════════ */}
       {isMounted && isNewOpen && createPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -1117,7 +1227,6 @@ export default function ClientiPage() {
             className="relative mx-4 flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h2 className="text-[18px] font-bold tracking-[-0.025em] text-slate-900">Nuovo cliente</h2>
@@ -1133,7 +1242,6 @@ export default function ClientiPage() {
               </button>
             </div>
 
-            {/* Corpo */}
             <div className="space-y-4 p-6">
               {newErrors.duplicato && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
@@ -1145,13 +1253,8 @@ export default function ClientiPage() {
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Nome <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={newNome}
-                  onChange={(e) => setNewNome(e.target.value)}
-                  placeholder="Es. Mario"
-                  className={newErrors.nome ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
+                <input type="text" value={newNome} onChange={(e) => setNewNome(e.target.value)} placeholder="Es. Mario"
+                  className={newErrors.nome ? FIELD_ERROR_CLASS : FIELD_CLASS} />
                 {newErrors.nome && <p className="mt-1 text-[12px] text-red-500">{newErrors.nome}</p>}
               </div>
 
@@ -1159,13 +1262,8 @@ export default function ClientiPage() {
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Cognome <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={newCognome}
-                  onChange={(e) => setNewCognome(e.target.value)}
-                  placeholder="Es. Rossi"
-                  className={newErrors.cognome ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
+                <input type="text" value={newCognome} onChange={(e) => setNewCognome(e.target.value)} placeholder="Es. Rossi"
+                  className={newErrors.cognome ? FIELD_ERROR_CLASS : FIELD_CLASS} />
                 {newErrors.cognome && <p className="mt-1 text-[12px] text-red-500">{newErrors.cognome}</p>}
               </div>
 
@@ -1173,13 +1271,8 @@ export default function ClientiPage() {
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Telefono <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={newTelefono}
-                  onChange={(e) => setNewTelefono(e.target.value)}
-                  placeholder="Es. 333-1234567"
-                  className={newErrors.telefono ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
+                <input type="text" value={newTelefono} onChange={(e) => setNewTelefono(e.target.value)} placeholder="Es. 333-1234567"
+                  className={newErrors.telefono ? FIELD_ERROR_CLASS : FIELD_CLASS} />
                 {newErrors.telefono && <p className="mt-1 text-[12px] text-red-500">{newErrors.telefono}</p>}
               </div>
 
@@ -1187,13 +1280,8 @@ export default function ClientiPage() {
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Città <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={newCitta}
-                  onChange={(e) => setNewCitta(e.target.value)}
-                  placeholder="Es. Milano"
-                  className={newErrors.citta ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
+                <input type="text" value={newCitta} onChange={(e) => setNewCitta(e.target.value)} placeholder="Es. Milano"
+                  className={newErrors.citta ? FIELD_ERROR_CLASS : FIELD_CLASS} />
                 {newErrors.citta && <p className="mt-1 text-[12px] text-red-500">{newErrors.citta}</p>}
               </div>
 
@@ -1201,41 +1289,28 @@ export default function ClientiPage() {
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
                   Email <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Es. mario.rossi@email.it"
-                  className={newErrors.email ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
+                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Es. mario.rossi@email.it"
+                  className={newErrors.email ? FIELD_ERROR_CLASS : FIELD_CLASS} />
                 {newErrors.email && <p className="mt-1 text-[12px] text-red-500">{newErrors.email}</p>}
               </div>
 
               <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Note
-                </label>
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Note interne sul cliente..."
-                  rows={3}
-                  className={TEXTAREA_CLASS}
-                />
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">Note</label>
+                <textarea value={newNote} onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Note interne sul cliente..." rows={3} className={TEXTAREA_CLASS} />
               </div>
             </div>
 
-            {/* Sezione lavori pregressi */}
+            {/* Lavori pregressi */}
             <div className="border-t border-stone-200 px-6">
               <div
-                className="flex cursor-pointer flex-col py-3 hover:bg-stone-50 -mx-6 px-6"
+                className="-mx-6 flex cursor-pointer flex-col px-6 py-3 hover:bg-stone-50"
                 onClick={() => setIsLavoriOpen((o) => !o)}
               >
                 <div className="flex items-center gap-2">
                   {isLavoriOpen
                     ? <ChevronDown className="h-4 w-4 text-slate-500" />
-                    : <ChevronRight className="h-4 w-4 text-slate-500" />
-                  }
+                    : <ChevronRight className="h-4 w-4 text-slate-500" />}
                   <span className="text-[13px] font-medium text-slate-700">Aggiungi lavori pregressi</span>
                 </div>
                 <p className="ml-6 mt-0.5 text-[12px] text-slate-500">
@@ -1248,11 +1323,8 @@ export default function ClientiPage() {
                     <div key={lav.localId} className="rounded-lg border border-stone-200 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="w-16 shrink-0 font-mono text-xs text-slate-500">{lav.codiceLavoro}</span>
-                        <select
-                          value={lav.tipoLavoro}
-                          onChange={(e) => updateLavoro(lav.localId, "tipoLavoro", e.target.value)}
-                          className={`flex-1 rounded border ${lav.errors.tipoLavoro ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
-                        >
+                        <select value={lav.tipoLavoro} onChange={(e) => updateLavoro(lav.localId, "tipoLavoro", e.target.value)}
+                          className={`flex-1 rounded border ${lav.errors.tipoLavoro ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}>
                           <option value="">Tipo lavoro</option>
                           <option>Orlo pantalone</option>
                           <option>Stringere vita</option>
@@ -1263,11 +1335,8 @@ export default function ClientiPage() {
                           <option>Pantalone su misura</option>
                           <option>Altro</option>
                         </select>
-                        <select
-                          value={lav.stato}
-                          onChange={(e) => updateLavoro(lav.localId, "stato", e.target.value)}
-                          className={`w-36 rounded border ${lav.errors.stato ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
-                        >
+                        <select value={lav.stato} onChange={(e) => updateLavoro(lav.localId, "stato", e.target.value)}
+                          className={`w-36 rounded border ${lav.errors.stato ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}>
                           <option value="">Stato</option>
                           <option>Da iniziare</option>
                           <option>In lavorazione</option>
@@ -1276,75 +1345,43 @@ export default function ClientiPage() {
                           <option>Consegnato</option>
                           <option>Annullato</option>
                         </select>
-                        <input
-                          type="date"
-                          value={lav.dataConsegna}
-                          onChange={(e) => updateLavoro(lav.localId, "dataConsegna", e.target.value)}
-                          className={`w-36 rounded border ${lav.errors.dataConsegna ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
-                        />
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="€"
-                          value={lav.prezzo}
-                          onChange={(e) => updateLavoro(lav.localId, "prezzo", e.target.value)}
-                          className={`w-20 rounded border ${lav.errors.prezzo ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => toggleLavoroExpanded(lav.localId)}
-                          className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-stone-100 hover:text-slate-600"
-                        >
+                        <input type="date" value={lav.dataConsegna} onChange={(e) => updateLavoro(lav.localId, "dataConsegna", e.target.value)}
+                          className={`w-36 rounded border ${lav.errors.dataConsegna ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`} />
+                        <input type="number" step="0.01" placeholder="€" value={lav.prezzo} onChange={(e) => updateLavoro(lav.localId, "prezzo", e.target.value)}
+                          className={`w-20 rounded border ${lav.errors.prezzo ? "border-red-300 bg-red-50" : "border-stone-200"} bg-white px-2 py-1 text-sm text-slate-800 focus:outline-none`} />
+                        <button type="button" onClick={() => toggleLavoroExpanded(lav.localId)}
+                          className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-stone-100 hover:text-slate-600">
                           {lav.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); removeLavoro(lav.localId); }}
-                          className="flex h-7 w-7 items-center justify-center rounded text-red-500 hover:bg-red-50"
-                        >
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeLavoro(lav.localId); }}
+                          className="flex h-7 w-7 items-center justify-center rounded text-red-500 hover:bg-red-50">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       {lav.expanded && (
                         <div className="mt-2">
-                          <textarea
-                            value={lav.descrizione}
-                            onChange={(e) => updateLavoro(lav.localId, "descrizione", e.target.value)}
-                            placeholder="Es. orlo a macchina su pantalone blu elegante"
-                            rows={2}
-                            className="w-full resize-none rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
-                          />
+                          <textarea value={lav.descrizione} onChange={(e) => updateLavoro(lav.localId, "descrizione", e.target.value)}
+                            placeholder="Es. orlo a macchina su pantalone blu elegante" rows={2}
+                            className="w-full resize-none rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50" />
                         </div>
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={addLavoro}
-                    disabled={loadingCodice}
-                    className="w-full rounded-lg border border-amber-600 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
+                  <button type="button" onClick={addLavoro} disabled={loadingCodice}
+                    className="w-full rounded-lg border border-amber-600 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50">
                     {loadingCodice ? "Caricamento..." : "+ Aggiungi lavoro"}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
             <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => { setIsNewOpen(false); resetNewForm(); }}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-stone-50"
-              >
+              <button type="button" onClick={() => { setIsNewOpen(false); resetNewForm(); }}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-stone-50">
                 Annulla
               </button>
-              <button
-                type="button"
-                onClick={handleNewSubmit}
-                disabled={isSubmitting}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
+              <button type="button" onClick={handleNewSubmit} disabled={isSubmitting}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
                 {isSubmitting ? "Salvataggio..." : "Salva cliente"}
               </button>
             </div>
@@ -1353,153 +1390,7 @@ export default function ClientiPage() {
         document.body
       )}
 
-      {/* ══ Modal modifica cliente ═══════════════════════════════════════════════ */}
-      {isMounted && isEditOpen && selectedCliente && createPortal(
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => { setIsEditOpen(false); resetEditForm(); }}
-        >
-          <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-5">
-              <div>
-                <h2 className="text-[18px] font-bold tracking-[-0.025em] text-slate-900">Modifica cliente</h2>
-                <p className="mt-1 text-[13px] text-slate-400">
-                  {selectedCliente.nome} {selectedCliente.cognome}
-                </p>
-              </div>
-              <button
-                className="ml-4 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                onClick={() => { setIsEditOpen(false); resetEditForm(); }}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Corpo */}
-            <div className="space-y-4 p-6">
-              {editErrors.duplicato && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
-                  {editErrors.duplicato}
-                </div>
-              )}
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Nome <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editNome}
-                  onChange={(e) => setEditNome(e.target.value)}
-                  className={editErrors.nome ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.nome && <p className="mt-1 text-[12px] text-red-500">{editErrors.nome}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Cognome <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editCognome}
-                  onChange={(e) => setEditCognome(e.target.value)}
-                  className={editErrors.cognome ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.cognome && <p className="mt-1 text-[12px] text-red-500">{editErrors.cognome}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Telefono <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editTelefono}
-                  onChange={(e) => setEditTelefono(e.target.value)}
-                  className={editErrors.telefono ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.telefono && <p className="mt-1 text-[12px] text-red-500">{editErrors.telefono}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Città <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editCitta}
-                  onChange={(e) => setEditCitta(e.target.value)}
-                  placeholder="Es. Milano"
-                  className={editErrors.citta ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.citta && <p className="mt-1 text-[12px] text-red-500">{editErrors.citta}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className={editErrors.email ? FIELD_ERROR_CLASS : FIELD_CLASS}
-                />
-                {editErrors.email && <p className="mt-1 text-[12px] text-red-500">{editErrors.email}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                  Note
-                </label>
-                <textarea
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                  rows={3}
-                  className={TEXTAREA_CLASS}
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-6 py-4">
-              <button
-                type="button"
-                onClick={openDeleteFromEdit}
-                className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-2 text-[13px] font-medium text-red-700 transition-colors hover:bg-red-50"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Elimina cliente
-              </button>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setIsEditOpen(false); resetEditForm(); }}
-                  className="rounded-lg border border-stone-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-stone-50"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="button"
-                  onClick={handleEditSubmit}
-                  disabled={isEditSubmitting}
-                  className="rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ══ Modal conferma eliminazione ══════════════════════════════════════════ */}
+      {/* ══ Modal conferma eliminazione ════════════════════════════════════════════ */}
       {isMounted && isDeleteOpen && selectedCliente && createPortal(
         <div
           className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40"
@@ -1522,18 +1413,12 @@ export default function ClientiPage() {
               questa operazione.
             </p>
             <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsDeleteOpen(false)}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-stone-50"
-              >
+              <button type="button" onClick={() => setIsDeleteOpen(false)}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-stone-50">
                 Annulla
               </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-red-700 active:scale-[0.98]"
-              >
+              <button type="button" onClick={handleDelete}
+                className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-all hover:bg-red-700 active:scale-[0.98]">
                 Elimina definitivamente
               </button>
             </div>

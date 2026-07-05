@@ -16,7 +16,11 @@ export async function GET() {
           select: { projects: true },
         },
         projects: {
-          select: { status: true },
+          select: {
+            status: true,
+            price: true,
+            payments: { select: { status: true } },
+          },
         },
       },
     });
@@ -26,6 +30,11 @@ export async function GET() {
         acc[p.status] = (acc[p.status] ?? 0) + 1;
         return acc;
       }, {} as Record<string, number>);
+
+      const daIncassare = c.projects.reduce((sum, p) => {
+        const pagato = p.payments.some((pay) => pay.status === "PAID");
+        return pagato ? sum : sum + (p.price ?? 0);
+      }, 0);
 
       return {
         id: c.id,
@@ -41,6 +50,7 @@ export async function GET() {
           ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(p.status)
         ).length,
         segmentiStato,
+        daIncassare,
       };
     });
 
