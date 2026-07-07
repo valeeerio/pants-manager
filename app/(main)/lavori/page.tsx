@@ -73,12 +73,11 @@ const TEXTAREA_CLASS =
 
 
 const STATUS_COLORS: Record<string, string> = {
-  "Da iniziare": "bg-slate-200 text-slate-800 border-transparent",
-  "In lavorazione": "bg-blue-200 text-blue-800 border-transparent",
-  "In attesa cliente": "bg-orange-200 text-orange-800 border-transparent",
-  Pronto: "bg-green-200 text-green-800 border-transparent",
-  Consegnato: "bg-emerald-700 text-white border-transparent",
-  Annullato: "bg-red-200 text-red-800 border-transparent",
+  "Da iniziare": "bg-stone-100 text-stone-600 border-transparent",
+  "In lavorazione": "bg-amber-100 text-amber-700 border-transparent",
+  "In attesa cliente": "bg-orange-100 text-orange-700 border-transparent",
+  Pronto: "bg-emerald-100 text-emerald-700 border-transparent",
+  Annullato: "bg-red-100 text-red-700 border-transparent",
 };
 
 const REVERSE_STATUS_MAP: Record<string, string> = {
@@ -86,7 +85,6 @@ const REVERSE_STATUS_MAP: Record<string, string> = {
   "In lavorazione": "IN_PROGRESS",
   "In attesa cliente": "WAITING_CUSTOMER",
   Pronto: "COMPLETED",
-  Consegnato: "DELIVERED",
   Annullato: "CANCELLED",
 };
 
@@ -812,7 +810,6 @@ export default function JobsPage() {
                 <option value="In lavorazione">In lavorazione</option>
                 <option value="In attesa cliente">In attesa cliente</option>
                 <option value="Pronto">Pronto</option>
-                <option value="Consegnato">Consegnato</option>
                 <option value="Annullato">Annullato</option>
               </select>
             </div>
@@ -1283,7 +1280,6 @@ export default function JobsPage() {
                       In attesa cliente
                     </option>
                     <option value="Pronto">Pronto</option>
-                    <option value="Consegnato">Consegnato</option>
                     <option value="Annullato">Annullato</option>
                   </select>
                   <Button

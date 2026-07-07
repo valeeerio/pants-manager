@@ -39,8 +39,8 @@ async function main() {
 
   // Lavori
   const lavori = [
-    { code: "GS-001", clientId: clienti[0].id, title: "Orlo pantalone grigio", type: ProjectType.HEM, status: ProjectStatus.DELIVERED, price: 15, receivedAt: new Date("2024-11-01"), dueDate: new Date("2024-11-05") },
-    { code: "GS-002", clientId: clienti[1].id, title: "Stringere vita jeans", type: ProjectType.WAIST_TIGHTENING, status: ProjectStatus.DELIVERED, price: 25, receivedAt: new Date("2024-11-03"), dueDate: new Date("2024-11-08") },
+    { code: "GS-001", clientId: clienti[0].id, title: "Orlo pantalone grigio", type: ProjectType.HEM, status: ProjectStatus.COMPLETED, price: 15, receivedAt: new Date("2024-11-01"), dueDate: new Date("2024-11-05") },
+    { code: "GS-002", clientId: clienti[1].id, title: "Stringere vita jeans", type: ProjectType.WAIST_TIGHTENING, status: ProjectStatus.COMPLETED, price: 25, receivedAt: new Date("2024-11-03"), dueDate: new Date("2024-11-08") },
     { code: "GS-003", clientId: clienti[2].id, title: "Accorciare gamba pantalone blu", type: ProjectType.LEG_SHORTENING, status: ProjectStatus.COMPLETED, price: 20, receivedAt: new Date("2024-11-10"), dueDate: new Date("2024-11-15") },
     { code: "GS-004", clientId: clienti[3].id, title: "Sostituzione zip giacca", type: ProjectType.ZIP_REPLACEMENT, status: ProjectStatus.IN_PROGRESS, price: 35, receivedAt: new Date("2024-11-20"), dueDate: new Date("2024-11-28") },
     { code: "GS-005", clientId: clienti[4].id, title: "Riparazione strappo pantalone", type: ProjectType.REPAIR, status: ProjectStatus.TODO, price: 18, receivedAt: new Date("2024-11-22"), dueDate: new Date("2024-11-30") },
@@ -48,7 +48,7 @@ async function main() {
     { code: "GS-007", clientId: clienti[0].id, title: "Orlo pantalone nero", type: ProjectType.HEM, status: ProjectStatus.WAITING_CUSTOMER, price: 15, receivedAt: new Date("2024-11-25"), dueDate: new Date("2024-11-29") },
     { code: "GS-008", clientId: clienti[1].id, title: "Allargare pantalone vita", type: ProjectType.LEG_WIDENING, status: ProjectStatus.TODO, price: 30, receivedAt: new Date("2024-11-26"), dueDate: new Date("2024-12-05") },
     { code: "GS-009", clientId: clienti[2].id, title: "Accorciare due paia pantaloni", type: ProjectType.LEG_SHORTENING, status: ProjectStatus.COMPLETED, price: 35, receivedAt: new Date("2024-11-18"), dueDate: new Date("2024-11-23") },
-    { code: "GS-010", clientId: clienti[3].id, title: "Riparazione fodera giacca", type: ProjectType.REPAIR, status: ProjectStatus.DELIVERED, price: 40, receivedAt: new Date("2024-10-28"), dueDate: new Date("2024-11-05") },
+    { code: "GS-010", clientId: clienti[3].id, title: "Riparazione fodera giacca", type: ProjectType.REPAIR, status: ProjectStatus.COMPLETED, price: 40, receivedAt: new Date("2024-10-28"), dueDate: new Date("2024-11-05") },
     { code: "GS-011", clientId: clienti[4].id, title: "Stringere vita pantalone elegante", type: ProjectType.WAIST_TIGHTENING, status: ProjectStatus.IN_PROGRESS, price: 28, receivedAt: new Date("2024-11-27"), dueDate: new Date("2024-12-07") },
     { code: "GS-012", clientId: clienti[5].id, title: "Orlo tre pantaloni", type: ProjectType.HEM, status: ProjectStatus.TODO, price: 40, receivedAt: new Date("2024-11-28"), dueDate: new Date("2024-12-10") },
     { code: "GS-013", clientId: clienti[0].id, title: "Sostituzione zip pantalone", type: ProjectType.ZIP_REPLACEMENT, status: ProjectStatus.CANCELLED, price: 20, receivedAt: new Date("2024-11-10"), dueDate: new Date("2024-11-18") },

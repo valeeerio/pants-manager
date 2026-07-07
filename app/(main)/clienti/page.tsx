@@ -107,12 +107,14 @@ function emptyErrors(): FormErrors {
 
 function getSegmenti(cliente: Cliente) {
   const s = cliente.segmentiStato ?? {};
-  const completati = s["DELIVERED"] ?? 0;
-  const inCorso = (s["IN_PROGRESS"] ?? 0) + (s["WAITING_CUSTOMER"] ?? 0) + (s["COMPLETED"] ?? 0);
+  const completati = s["COMPLETED"] ?? 0;
+  const inLavorazione = s["IN_PROGRESS"] ?? 0;
+  const inAttesaCliente = s["WAITING_CUSTOMER"] ?? 0;
+  const inCorso = inLavorazione + inAttesaCliente;
   const daFare = s["TODO"] ?? 0;
   const annullati = s["CANCELLED"] ?? 0;
   const totale = completati + inCorso + daFare + annullati;
-  return { completati, inCorso, daFare, annullati, totale };
+  return { completati, inCorso, inLavorazione, inAttesaCliente, daFare, annullati, totale };
 }
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -129,11 +131,10 @@ const INLINE_INPUT_CLASS =
   "flex-1 rounded border border-amber-400 bg-amber-50/40 px-2 py-0.5 text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400/50";
 
 const STATUS_COLORS: Record<string, string> = {
-  "Da iniziare":       "bg-stone-200 text-stone-700",
-  "In lavorazione":    "bg-blue-100 text-blue-700",
+  "Da iniziare":       "bg-stone-100 text-stone-600",
+  "In lavorazione":    "bg-amber-100 text-amber-700",
   "In attesa cliente": "bg-orange-100 text-orange-700",
-  Pronto:              "bg-green-100 text-green-700",
-  Consegnato:          "bg-emerald-200 text-emerald-800",
+  Pronto:              "bg-emerald-100 text-emerald-700",
   Annullato:           "bg-red-100 text-red-700",
 };
 
@@ -142,9 +143,16 @@ const STATUS_MAP: Record<string, string> = {
   IN_PROGRESS:      "In lavorazione",
   WAITING_CUSTOMER: "In attesa cliente",
   COMPLETED:        "Pronto",
-  DELIVERED:        "Consegnato",
   CANCELLED:        "Annullato",
 };
+
+const STATUS_DOT_ORDER: { key: "daFare" | "inLavorazione" | "inAttesaCliente" | "completati" | "annullati"; label: string; bgColor: string }[] = [
+  { key: "daFare",          label: "Da iniziare",       bgColor: "bg-stone-400" },
+  { key: "inLavorazione",   label: "In lavorazione",    bgColor: "bg-amber-500" },
+  { key: "inAttesaCliente", label: "In attesa",         bgColor: "bg-orange-500" },
+  { key: "completati",      label: "Pronto",            bgColor: "bg-emerald-500" },
+  { key: "annullati",       label: "Annullato",         bgColor: "bg-red-500" },
+];
 
 const TIPO_LAVORO_TO_ENUM: Record<string, string> = {
   "Orlo pantalone":     "HEM",
@@ -207,9 +215,6 @@ export default function ClientiPage() {
   // ── Banner ────────────────────────────────────────────────────────────────────
   const [showBanner, setShowBanner] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
-
-  // ── Tooltip mouse-follow ──────────────────────────────────────────────────────
-  const [tooltipData, setTooltipData] = useState<{ cliente: Cliente; x: number; y: number } | null>(null);
 
   // ── New form ──────────────────────────────────────────────────────────────────
   const [newNome, setNewNome] = useState("");
@@ -909,21 +914,37 @@ export default function ClientiPage() {
                   </TableCell>
                   <TableCell className="min-w-[200px]">
                     {(() => {
-                      const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente);
+                      const segmenti = getSegmenti(cliente);
+                      const { totale } = segmenti;
                       if (totale === 0) return <span className="text-slate-400">—</span>;
+                      const attivi = STATUS_DOT_ORDER.filter(({ key }) => (segmenti[key] ?? 0) > 0);
                       return (
-                        <div className="flex items-center gap-3">
-                          <span className="shrink-0 text-sm text-slate-700">{totale}</span>
-                          <div
-                            className="flex flex-1 items-center gap-1 pr-4"
-                            onMouseEnter={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
-                            onMouseMove={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
-                            onMouseLeave={() => setTooltipData(null)}
-                          >
-                            {completati > 0 && <div className="h-2 rounded-full bg-green-400"  style={{ width: `${(completati / totale) * 100}%`, minWidth: "8px" }} />}
-                            {inCorso   > 0 && <div className="h-2 rounded-full bg-amber-400"  style={{ width: `${(inCorso   / totale) * 100}%`, minWidth: "8px" }} />}
-                            {daFare    > 0 && <div className="h-2 rounded-full bg-stone-300"  style={{ width: `${(daFare    / totale) * 100}%`, minWidth: "8px" }} />}
-                            {annullati > 0 && <div className="h-2 rounded-full bg-red-400"    style={{ width: `${(annullati / totale) * 100}%`, minWidth: "8px" }} />}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-sm font-medium text-slate-700">{totale}</span>
+                            <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                              {attivi.map(({ key, bgColor }) => {
+                                const count = segmenti[key];
+                                return (
+                                  <div
+                                    key={key}
+                                    className={bgColor}
+                                    style={{ flexGrow: count, flexShrink: 1, flexBasis: 0 }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {attivi.map(({ key, label, bgColor }) => (
+                              <span
+                                key={key}
+                                className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium text-slate-600"
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${bgColor}`} />
+                                {segmenti[key]} {label}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       );
@@ -943,22 +964,6 @@ export default function ClientiPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* ══ Tooltip lavori ════════════════════════════════════════════════════════ */}
-      {tooltipData && (() => {
-        const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente);
-        return (
-          <div
-            style={{ position: "fixed", left: tooltipData.x + 12, top: tooltipData.y + 12, pointerEvents: "none", zIndex: 50 }}
-            className="whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-xs text-white shadow-lg"
-          >
-            {completati > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-400" />Consegnati: {completati}</div>}
-            {inCorso    > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />In corso: {inCorso}</div>}
-            {daFare     > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-stone-300" />Da iniziare: {daFare}</div>}
-            {annullati  > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400"   />Annullati: {annullati}</div>}
-          </div>
-        );
-      })()}
 
       {/* ══ Banner successo ═══════════════════════════════════════════════════════ */}
       {isMounted && showBanner && createPortal(
@@ -1348,7 +1353,6 @@ export default function ClientiPage() {
                           <option>In lavorazione</option>
                           <option>In attesa cliente</option>
                           <option>Pronto</option>
-                          <option>Consegnato</option>
                           <option>Annullato</option>
                         </select>
                         <input type="date" value={lav.dataConsegna} onChange={(e) => updateLavoro(lav.localId, "dataConsegna", e.target.value)}

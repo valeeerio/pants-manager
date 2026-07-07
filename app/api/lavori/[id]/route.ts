@@ -8,7 +8,6 @@ const STATUS_MAP: Record<string, string> = {
   IN_PROGRESS: "In lavorazione",
   WAITING_CUSTOMER: "In attesa cliente",
   COMPLETED: "Pronto",
-  DELIVERED: "Consegnato",
   CANCELLED: "Annullato",
 };
 
