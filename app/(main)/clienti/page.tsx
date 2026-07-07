@@ -18,6 +18,7 @@ import {
   UserPlus,
   Clock,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,6 +173,8 @@ function SortIndicator({ active, order }: { active: boolean; order: SortOrder })
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function ClientiPage() {
+  const router = useRouter();
+
   // ── Data ─────────────────────────────────────────────────────────────────────
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +230,7 @@ export default function ClientiPage() {
   const [clienteLavori, setClienteLavori] = useState<LavoroStorico[]>([]);
   const [clienteLavoriLoading, setClienteLavoriLoading] = useState(false);
   const [clienteLavoriError, setClienteLavoriError] = useState<string | null>(null);
+  const [clienteTotali, setClienteTotali] = useState<{ totaleSpeso: number; daIncassare: number } | null>(null);
 
   // ── Effects ───────────────────────────────────────────────────────────────────
 
@@ -351,17 +355,13 @@ export default function ClientiPage() {
 
   const detailStats = useMemo(() => {
     if (!selectedCliente) return null;
-    const totaleSpeso = clienteLavori
-      .filter((l) => l.stato === "Consegnato")
-      .reduce((s, l) => s + l.prezzo, 0);
-    const daIncassare = clienteLavori
-      .filter((l) => l.stato === "Pronto")
-      .reduce((s, l) => s + l.prezzo, 0);
+    const totaleSpeso = clienteTotali?.totaleSpeso ?? 0;
+    const daIncassare = clienteTotali?.daIncassare ?? 0;
     const sorted = [...clienteLavori].sort((a, b) =>
       b.dataConsegna.localeCompare(a.dataConsegna)
     );
     return { totaleSpeso, daIncassare, sorted };
-  }, [selectedCliente, clienteLavori]);
+  }, [selectedCliente, clienteLavori, clienteTotali]);
 
   // ── Utility ───────────────────────────────────────────────────────────────────
 
@@ -386,12 +386,15 @@ export default function ClientiPage() {
     setClienteLavori([]);
     setClienteLavoriError(null);
     setClienteLavoriLoading(true);
+    setClienteTotali(null);
     cancelEditing();
 
     try {
       const res = await fetch(`/api/clienti/${cliente.id}`);
       if (!res.ok) throw new Error("Errore nel caricamento dei lavori del cliente");
       const data = await res.json();
+
+      setClienteTotali({ totaleSpeso: data.totaleSpeso ?? 0, daIncassare: data.daIncassare ?? 0 });
 
       const lavoriMappati: LavoroStorico[] = (data.lavori ?? []).map((l: {
         id: string;
@@ -975,7 +978,7 @@ export default function ClientiPage() {
           onClick={() => { setIsDetailOpen(false); cancelEditing(); }}
         >
           <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
+            className="relative mx-4 flex h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1071,9 +1074,9 @@ export default function ClientiPage() {
             </div>
 
             {/* Corpo */}
-            <div className="space-y-6 p-6">
-              {/* Strip 4 mini-card */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="flex flex-1 min-h-0 flex-col gap-6 overflow-hidden p-6">
+              {/* Strip 4 mini-card — larghezza piena */}
+              <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
                   { label: "Lavori totali", value: String(selectedCliente.numeroLavori), amber: false },
                   { label: "Lavori attivi", value: String(selectedCliente.lavoriAttivi), amber: selectedCliente.lavoriAttivi > 0 },
@@ -1089,127 +1092,130 @@ export default function ClientiPage() {
                 ))}
               </div>
 
-              {/* Contatti */}
-              <div>
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Contatti</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {renderInlineField(
-                    "telefono", "Telefono",
-                    <a href={`tel:${selectedCliente.telefono}`} className="font-mono text-[13px] font-medium text-amber-700 hover:underline">
-                      {selectedCliente.telefono}
-                    </a>,
-                    selectedCliente.telefono, "tel"
-                  )}
-                  {renderInlineField(
-                    "email", "Email",
-                    selectedCliente.email
-                      ? <a href={`mailto:${selectedCliente.email}`} className="text-[13px] font-medium text-amber-700 hover:underline">{selectedCliente.email}</a>
-                      : <span className="text-[13px] text-slate-400">—</span>,
-                    selectedCliente.email ?? "", "email"
-                  )}
-                  {renderInlineField(
-                    "citta", "Città",
-                    <span className={`text-[13px] font-medium ${selectedCliente.citta ? "text-slate-700" : "text-slate-400"}`}>
-                      {selectedCliente.citta || "—"}
-                    </span>,
-                    selectedCliente.citta ?? ""
-                  )}
-                </div>
-              </div>
+              {/* Due colonne: Contatti+Note a sinistra, Storico lavori a destra */}
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-4">
 
-              {/* Note */}
-              <div>
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Note</p>
-                {editingField === "note" ? (
+                {/* Colonna sinistra: Contatti + Note */}
+                <div className="flex min-h-0 flex-col gap-6 overflow-y-auto pr-1 lg:col-span-1">
+                  {/* Contatti */}
                   <div>
-                    <div className="flex items-start gap-1.5">
-                      <textarea
-                        autoFocus
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        rows={3}
-                        className="flex-1 resize-none rounded border border-amber-400 bg-amber-50/40 px-2 py-1 text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
-                      />
-                      <div className="flex flex-col gap-1">
-                        <button onClick={() => saveField("note")} disabled={isSavingField}
-                          className="flex h-6 w-6 items-center justify-center rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
-                          {isSavingField ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="h-3.5 w-3.5" />}
-                        </button>
-                        <button onClick={cancelEditing}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-slate-300 text-slate-500 hover:bg-slate-50">
-                          <X className="h-3.5 w-3.5" />
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Contatti</p>
+                    <div className="flex flex-col gap-4">
+                      {renderInlineField(
+                        "telefono", "Telefono",
+                        <a href={`tel:${selectedCliente.telefono}`} className="font-mono text-[13px] font-medium text-amber-700 hover:underline">
+                          {selectedCliente.telefono}
+                        </a>,
+                        selectedCliente.telefono, "tel"
+                      )}
+                      {renderInlineField(
+                        "email", "Email",
+                        selectedCliente.email
+                          ? <a href={`mailto:${selectedCliente.email}`} className="text-[13px] font-medium text-amber-700 hover:underline">{selectedCliente.email}</a>
+                          : <span className="text-[13px] text-slate-400">—</span>,
+                        selectedCliente.email ?? "", "email"
+                      )}
+                      {renderInlineField(
+                        "citta", "Città",
+                        <span className={`text-[13px] font-medium ${selectedCliente.citta ? "text-slate-700" : "text-slate-400"}`}>
+                          {selectedCliente.citta || "—"}
+                        </span>,
+                        selectedCliente.citta ?? ""
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Note</p>
+                    {editingField === "note" ? (
+                      <div>
+                        <div className="flex items-start gap-1.5">
+                          <textarea
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            rows={3}
+                            className="flex-1 resize-none rounded border border-amber-400 bg-amber-50/40 px-2 py-1 text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                          />
+                          <div className="flex flex-col gap-1">
+                            <button onClick={() => saveField("note")} disabled={isSavingField}
+                              className="flex h-6 w-6 items-center justify-center rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+                              {isSavingField ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="h-3.5 w-3.5" />}
+                            </button>
+                            <button onClick={cancelEditing}
+                              className="flex h-6 w-6 items-center justify-center rounded border border-slate-300 text-slate-500 hover:bg-slate-50">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {fieldError && editingField === "note" && (
+                          <p className="mt-1 text-[12px] text-red-500">{fieldError}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="group flex items-start gap-1.5">
+                        <p className={`text-[13px] ${selectedCliente.note ? "text-slate-700" : "text-slate-400"}`}>
+                          {selectedCliente.note || "Nessuna nota"}
+                        </p>
+                        <button
+                          onClick={() => startEditing("note", selectedCliente.note ?? "")}
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-amber-600 group-hover:opacity-100"
+                        >
+                          <Pencil className="h-3 w-3" />
                         </button>
                       </div>
-                    </div>
-                    {fieldError && editingField === "note" && (
-                      <p className="mt-1 text-[12px] text-red-500">{fieldError}</p>
                     )}
                   </div>
-                ) : (
-                  <div className="group flex items-start gap-1.5">
-                    <p className={`text-[13px] ${selectedCliente.note ? "text-slate-700" : "text-slate-400"}`}>
-                      {selectedCliente.note || "Nessuna nota"}
-                    </p>
-                    <button
-                      onClick={() => startEditing("note", selectedCliente.note ?? "")}
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-amber-600 group-hover:opacity-100"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
 
-              {/* Storico lavori */}
-              <div className="border-t-2 border-stone-200 pt-6">
-                <p className="mb-3 text-[15px] font-semibold text-slate-800">Storico lavori</p>
-                {clienteLavoriLoading ? (
-                  <p className="text-center text-[13px] text-slate-500">Caricamento...</p>
-                ) : clienteLavoriError ? (
-                  <p className="text-center text-[13px] text-red-600">{clienteLavoriError}</p>
-                ) : detailStats.sorted.length === 0 ? (
-                  <p className="text-center text-[13px] text-slate-500">
-                    Nessun lavoro registrato per questo cliente.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[12px]">
-                      <thead>
-                        <tr className="border-b border-stone-200">
-                          <th className="pb-2 text-left font-semibold text-slate-500">Codice</th>
-                          <th className="pb-2 text-left font-semibold text-slate-500">Tipo</th>
-                          <th className="pb-2 text-left font-semibold text-slate-500">Stato</th>
-                          <th className="pb-2 text-left font-semibold text-slate-500">Consegna</th>
-                          <th className="pb-2 text-right font-semibold text-slate-500">Prezzo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {detailStats.sorted.map((lav) => (
-                          <tr key={lav.id} className="border-b border-stone-100 last:border-0">
-                            <td className="py-2 font-mono text-slate-600">{lav.codiceLavoro}</td>
-                            <td className="py-2 text-slate-700">{lav.tipoLavoro}</td>
-                            <td className="py-2">
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[lav.stato] ?? "bg-stone-100 text-stone-700"}`}>
-                                {lav.stato}
-                              </span>
-                            </td>
-                            <td className="py-2 text-slate-500">{lav.dataConsegna ? formatDataIt(lav.dataConsegna) : "—"}</td>
-                            <td className="py-2 text-right font-medium text-slate-700">{formatEur(lav.prezzo)}</td>
+                {/* Colonna destra: Storico lavori */}
+                <div className="flex min-h-0 flex-col overflow-hidden lg:col-span-3">
+                  <p className="mb-3 shrink-0 text-[15px] font-semibold text-slate-800">Storico lavori</p>
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
+                    {clienteLavoriLoading ? (
+                      <p className="text-center text-[13px] text-slate-500">Caricamento...</p>
+                    ) : clienteLavoriError ? (
+                      <p className="text-center text-[13px] text-red-600">{clienteLavoriError}</p>
+                    ) : detailStats.sorted.length === 0 ? (
+                      <p className="text-center text-[13px] text-slate-500">
+                        Nessun lavoro registrato per questo cliente.
+                      </p>
+                    ) : (
+                      <table className="w-full text-[12px]">
+                        <thead className="sticky top-0 bg-white">
+                          <tr className="border-b border-stone-200">
+                            <th className="pb-2 text-left font-semibold text-slate-500">Codice</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Tipo</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Stato</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Consegna</th>
+                            <th className="pb-2 text-right font-semibold text-slate-500">Prezzo</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {detailStats.sorted.map((lav) => (
+                            <tr
+                              key={lav.id}
+                              className="cursor-pointer border-b border-stone-100 last:border-0 hover:bg-stone-50"
+                              onClick={() => router.push(`/lavori?apri=${lav.id}`)}
+                            >
+                              <td className="py-2 font-mono text-slate-600">{lav.codiceLavoro}</td>
+                              <td className="py-2 text-slate-700">{lav.tipoLavoro}</td>
+                              <td className="py-2">
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[lav.stato] ?? "bg-stone-100 text-stone-700"}`}>
+                                  {lav.stato}
+                                </span>
+                              </td>
+                              <td className="py-2 text-slate-500">{lav.dataConsegna ? formatDataIt(lav.dataConsegna) : "—"}</td>
+                              <td className="py-2 text-right font-medium text-slate-700">{formatEur(lav.prezzo)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
 
-              <div className="flex justify-center">
-                <a
-                  href="/lavori"
-                  className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-amber-700"
-                >
-                  Gestisci i lavori di {selectedCliente.nome} {selectedCliente.cognome}
-                </a>
               </div>
             </div>
           </div>

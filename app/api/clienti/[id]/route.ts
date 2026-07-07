@@ -26,6 +26,7 @@ export async function GET(
             status: true,
             dueDate: true,
             price: true,
+            payments: { select: { status: true } },
           },
         },
         _count: {
@@ -41,6 +42,15 @@ export async function GET(
       );
     }
 
+    const totaleSpeso = cliente.projects.reduce((sum, p) => {
+      const pagato = p.payments.some((pay) => pay.status === "PAID");
+      return pagato ? sum + (p.price ?? 0) : sum;
+    }, 0);
+    const daIncassare = cliente.projects.reduce((sum, p) => {
+      const pagato = p.payments.some((pay) => pay.status === "PAID");
+      return pagato ? sum : sum + (p.price ?? 0);
+    }, 0);
+
     return NextResponse.json({
       id: cliente.id,
       nome: cliente.firstName,
@@ -54,6 +64,8 @@ export async function GET(
       lavoriAttivi: cliente.projects.filter((p) =>
         ["TODO", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(p.status)
       ).length,
+      totaleSpeso,
+      daIncassare,
       lavori: cliente.projects.map((p) => ({
         id: p.id,
         codice: p.code,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   ClipboardList,
@@ -150,6 +151,9 @@ function localDateStr(date: Date): string {
 }
 
 export default function JobsPage() {
+  const router = useRouter();
+  const apriParamHandled = useRef(false);
+
   // List state (mutable for delete / status change)
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,6 +260,28 @@ export default function JobsPage() {
     }
     caricaDati();
   }, []);
+
+  // Apertura automatica modal se URL contiene ?apri=<id>
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    if (apriParamHandled.current) return;
+    const apriId = new URLSearchParams(window.location.search).get("apri");
+    if (!apriId) return;
+    const job = jobs.find((j) => j.id === apriId);
+    if (job) {
+      openModal(job);
+      apriParamHandled.current = true;
+    }
+  }, [jobs]);
+
+  // Pulizia URL quando il modal aperto via param viene chiuso
+  useEffect(() => {
+    if (!isModalOpen && apriParamHandled.current) {
+      router.replace("/lavori");
+      apriParamHandled.current = false;
+    }
+  }, [isModalOpen]);
+
 
   const filteredAndSorted = useMemo(() => {
     const now = new Date();
