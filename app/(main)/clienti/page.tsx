@@ -919,31 +919,28 @@ export default function ClientiPage() {
                       if (totale === 0) return <span className="text-slate-400">—</span>;
                       const attivi = STATUS_DOT_ORDER.filter(({ key }) => (segmenti[key] ?? 0) > 0);
                       return (
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-sm font-medium text-slate-700">{totale}</span>
-                            <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                              {attivi.map(({ key, bgColor }) => {
-                                const count = segmenti[key];
-                                return (
-                                  <div
-                                    key={key}
-                                    className={bgColor}
-                                    style={{ flexGrow: count, flexShrink: 1, flexBasis: 0 }}
-                                  />
-                                );
-                              })}
-                            </div>
+                        <div className="group relative flex items-center gap-2">
+                          <span className="shrink-0 text-sm font-medium text-slate-700">{totale}</span>
+                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                            {attivi.map(({ key, bgColor }) => {
+                              const count = segmenti[key];
+                              return (
+                                <div
+                                  key={key}
+                                  className={bgColor}
+                                  style={{ flexGrow: count, flexShrink: 1, flexBasis: 0 }}
+                                />
+                              );
+                            })}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+
+                          {/* Tooltip custom */}
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-[12px] text-white shadow-lg group-hover:block">
                             {attivi.map(({ key, label, bgColor }) => (
-                              <span
-                                key={key}
-                                className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium text-slate-600"
-                              >
+                              <div key={key} className="flex items-center gap-1.5 py-0.5">
                                 <span className={`h-1.5 w-1.5 rounded-full ${bgColor}`} />
-                                {segmenti[key]} {label}
-                              </span>
+                                <span>{label}: {segmenti[key]}</span>
+                              </div>
                             ))}
                           </div>
                         </div>
