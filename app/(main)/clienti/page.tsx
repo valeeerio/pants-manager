@@ -12,7 +12,6 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  CheckCircle,
   Check,
   Users,
   UserPlus,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
+import { NotificationBanner } from "@/components/ui/notification-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -203,8 +203,7 @@ export default function ClientiPage() {
   const cognomeMeasureRef = useRef<HTMLSpanElement>(null);
 
   // ── Banner ────────────────────────────────────────────────────────────────────
-  const [showBanner, setShowBanner] = useState(false);
-  const [bannerMessage, setBannerMessage] = useState("");
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // ── Tooltip mouse-follow ──────────────────────────────────────────────────────
   const [tooltipData, setTooltipData] = useState<{ cliente: Cliente; x: number; y: number } | null>(null);
@@ -363,12 +362,6 @@ export default function ClientiPage() {
 
   // ── Utility ───────────────────────────────────────────────────────────────────
 
-  function showSuccess(msg: string) {
-    setBannerMessage(msg);
-    setShowBanner(true);
-    setTimeout(() => setShowBanner(false), 3000);
-  }
-
   function handleSort(col: SortKey) {
     if (sortBy === col) {
       setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
@@ -505,7 +498,7 @@ export default function ClientiPage() {
       setClienti((prev) => prev.map((c) => (c.id === aggiornato.id ? aggiornato : c)));
       setSelectedCliente(aggiornato);
       cancelEditing();
-      showSuccess("Modificato con successo");
+      setNotification({ type: "success", message: "Modificato con successo" });
     } catch (err) {
       setFieldError(err instanceof Error ? err.message : "Errore nella modifica");
     } finally {
@@ -619,15 +612,18 @@ export default function ClientiPage() {
         const falliti = risultati.filter((r) => r.status === "rejected").length;
         setClienti((prev) => [{ ...clienteCreato, daIncassare: 0 }, ...prev]);
         setIsNewOpen(false); resetNewForm();
-        showSuccess(falliti > 0
-          ? `Cliente creato, ma ${falliti} lavoro/i pregressi non salvati — aggiungili dalla pagina Lavori.`
-          : "Cliente e lavori pregressi aggiunti con successo");
+        setNotification({
+          type: "success",
+          message: falliti > 0
+            ? `Cliente creato, ma ${falliti} lavoro/i pregressi non salvati — aggiungili dalla pagina Lavori.`
+            : "Cliente e lavori pregressi aggiunti con successo",
+        });
         return;
       }
 
       setClienti((prev) => [{ ...clienteCreato, daIncassare: 0 }, ...prev]);
       setIsNewOpen(false); resetNewForm();
-      showSuccess("Cliente aggiunto con successo");
+      setNotification({ type: "success", message: "Cliente aggiunto con successo" });
     } catch (err) {
       console.error(err);
       setNewErrors((prev) => ({
@@ -687,10 +683,10 @@ export default function ClientiPage() {
       setIsDeleteOpen(false);
       setIsDetailOpen(false);
       setSelectedCliente(null);
-      showSuccess("Cliente eliminato");
+      setNotification({ type: "success", message: "Cliente eliminato" });
     } catch (err) {
       console.error(err);
-      alert((err as Error).message);
+      setNotification({ type: "error", message: (err as Error).message });
     }
   }
 
@@ -958,15 +954,13 @@ export default function ClientiPage() {
         );
       })()}
 
-      {/* ══ Banner successo ═══════════════════════════════════════════════════════ */}
-      {isMounted && showBanner && createPortal(
-        <div className="fixed right-4 top-4 z-[500] flex items-center gap-3 rounded-xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-green-50/40 px-4 py-3 shadow-md">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-            <CheckCircle className="h-3.5 w-3.5" />
-          </div>
-          <p className="text-[13px] font-medium text-emerald-800">{bannerMessage}</p>
-        </div>,
-        document.body
+      {/* ══ Banner notifica ═══════════════════════════════════════════════════════ */}
+      {isMounted && notification && (
+        <NotificationBanner
+          type={notification.type}
+          message={notification.message}
+          onDismiss={() => setNotification(null)}
+        />
       )}
 
       {/* ══ Modal dettaglio cliente ═══════════════════════════════════════════════ */}

@@ -13,10 +13,10 @@ import {
   Trash2,
   RefreshCw,
   Pencil,
-  CheckCircle,
   Camera,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
+import { NotificationBanner } from "@/components/ui/notification-banner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,9 +178,8 @@ export default function JobsPage() {
   const [statusChangeError, setStatusChangeError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
-  // Banner successo
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  // Banner notifica
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // Foto Prima / Dopo — per sessione, lettura base64 in memoria
   const [jobPhotos, setJobPhotos] = useState<Record<string, JobPhotos>>({});
@@ -430,8 +429,7 @@ export default function JobsPage() {
       setJobs((prev) => [lavoroCreato, ...prev]);
       setIsNewModalOpen(false);
       resetNewForm();
-      setSuccessMessage("Lavoro creato con successo!");
-      setShowSuccessBanner(true);
+      setNotification({ type: "success", message: "Lavoro creato con successo!" });
     } catch (err) {
       console.error(err);
     } finally {
@@ -503,8 +501,7 @@ export default function JobsPage() {
       );
       setIsEditModalOpen(false);
       resetEditForm();
-      setSuccessMessage("Lavoro modificato con successo!");
-      setShowSuccessBanner(true);
+      setNotification({ type: "success", message: "Lavoro modificato con successo!" });
     } catch (err) {
       console.error(err);
     } finally {
@@ -746,13 +743,12 @@ export default function JobsPage() {
         }
       />
 
-      {showSuccessBanner && (
-        <div className="animate-fade-in flex items-center gap-3 rounded-xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-green-50/40 px-4 py-3 shadow-sm">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-            <CheckCircle className="h-3.5 w-3.5" />
-          </div>
-          <p className="text-[13px] font-medium text-emerald-800">{successMessage}</p>
-        </div>
+      {isMounted && notification && (
+        <NotificationBanner
+          type={notification.type}
+          message={notification.message}
+          onDismiss={() => setNotification(null)}
+        />
       )}
 
       <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
