@@ -108,13 +108,11 @@ function emptyErrors(): FormErrors {
 function getSegmenti(cliente: Cliente) {
   const s = cliente.segmentiStato ?? {};
   const completati = s["COMPLETED"] ?? 0;
-  const inLavorazione = s["IN_PROGRESS"] ?? 0;
-  const inAttesaCliente = s["WAITING_CUSTOMER"] ?? 0;
-  const inCorso = inLavorazione + inAttesaCliente;
+  const inCorso = (s["IN_PROGRESS"] ?? 0) + (s["WAITING_CUSTOMER"] ?? 0);
   const daFare = s["TODO"] ?? 0;
   const annullati = s["CANCELLED"] ?? 0;
   const totale = completati + inCorso + daFare + annullati;
-  return { completati, inCorso, inLavorazione, inAttesaCliente, daFare, annullati, totale };
+  return { completati, inCorso, daFare, annullati, totale };
 }
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -145,14 +143,6 @@ const STATUS_MAP: Record<string, string> = {
   COMPLETED:        "Pronto",
   CANCELLED:        "Annullato",
 };
-
-const STATUS_DOT_ORDER: { key: "daFare" | "inLavorazione" | "inAttesaCliente" | "completati" | "annullati"; label: string; bgColor: string }[] = [
-  { key: "daFare",          label: "Da iniziare",       bgColor: "bg-stone-400" },
-  { key: "inLavorazione",   label: "In lavorazione",    bgColor: "bg-amber-500" },
-  { key: "inAttesaCliente", label: "In attesa",         bgColor: "bg-orange-500" },
-  { key: "completati",      label: "Pronto",            bgColor: "bg-emerald-500" },
-  { key: "annullati",       label: "Annullato",         bgColor: "bg-red-500" },
-];
 
 const TIPO_LAVORO_TO_ENUM: Record<string, string> = {
   "Orlo pantalone":     "HEM",
@@ -215,6 +205,9 @@ export default function ClientiPage() {
   // ── Banner ────────────────────────────────────────────────────────────────────
   const [showBanner, setShowBanner] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
+
+  // ── Tooltip mouse-follow ──────────────────────────────────────────────────────
+  const [tooltipData, setTooltipData] = useState<{ cliente: Cliente; x: number; y: number } | null>(null);
 
   // ── New form ──────────────────────────────────────────────────────────────────
   const [newNome, setNewNome] = useState("");
@@ -914,34 +907,21 @@ export default function ClientiPage() {
                   </TableCell>
                   <TableCell className="min-w-[200px]">
                     {(() => {
-                      const segmenti = getSegmenti(cliente);
-                      const { totale } = segmenti;
+                      const { completati, inCorso, daFare, annullati, totale } = getSegmenti(cliente);
                       if (totale === 0) return <span className="text-slate-400">—</span>;
-                      const attivi = STATUS_DOT_ORDER.filter(({ key }) => (segmenti[key] ?? 0) > 0);
                       return (
-                        <div className="group relative flex items-center gap-2">
-                          <span className="shrink-0 text-sm font-medium text-slate-700">{totale}</span>
-                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                            {attivi.map(({ key, bgColor }) => {
-                              const count = segmenti[key];
-                              return (
-                                <div
-                                  key={key}
-                                  className={bgColor}
-                                  style={{ flexGrow: count, flexShrink: 1, flexBasis: 0 }}
-                                />
-                              );
-                            })}
-                          </div>
-
-                          {/* Tooltip custom */}
-                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-[12px] text-white shadow-lg group-hover:block">
-                            {attivi.map(({ key, label, bgColor }) => (
-                              <div key={key} className="flex items-center gap-1.5 py-0.5">
-                                <span className={`h-1.5 w-1.5 rounded-full ${bgColor}`} />
-                                <span>{label}: {segmenti[key]}</span>
-                              </div>
-                            ))}
+                        <div className="flex items-center gap-3">
+                          <span className="shrink-0 text-sm text-slate-700">{totale}</span>
+                          <div
+                            className="flex flex-1 items-center gap-1 pr-4"
+                            onMouseEnter={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
+                            onMouseMove={(e) => setTooltipData({ cliente, x: e.clientX, y: e.clientY })}
+                            onMouseLeave={() => setTooltipData(null)}
+                          >
+                            {completati > 0 && <div className="h-2 rounded-full bg-green-400" style={{ width: `${(completati / totale) * 100}%`, minWidth: "8px" }} />}
+                            {inCorso   > 0 && <div className="h-2 rounded-full bg-amber-400" style={{ width: `${(inCorso   / totale) * 100}%`, minWidth: "8px" }} />}
+                            {daFare    > 0 && <div className="h-2 rounded-full bg-stone-300" style={{ width: `${(daFare    / totale) * 100}%`, minWidth: "8px" }} />}
+                            {annullati > 0 && <div className="h-2 rounded-full bg-red-400"   style={{ width: `${(annullati / totale) * 100}%`, minWidth: "8px" }} />}
                           </div>
                         </div>
                       );
@@ -961,6 +941,22 @@ export default function ClientiPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ══ Tooltip lavori ════════════════════════════════════════════════════════ */}
+      {tooltipData && (() => {
+        const { completati, inCorso, daFare, annullati } = getSegmenti(tooltipData.cliente);
+        return (
+          <div
+            style={{ position: "fixed", left: tooltipData.x + 12, top: tooltipData.y + 12, pointerEvents: "none", zIndex: 50 }}
+            className="whitespace-nowrap rounded-lg bg-stone-800 px-3 py-2 text-xs text-white shadow-lg"
+          >
+            {completati > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-400" />Pronti: {completati}</div>}
+            {inCorso    > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />In corso: {inCorso}</div>}
+            {daFare     > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-stone-300" />Da iniziare: {daFare}</div>}
+            {annullati  > 0 && <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400"   />Annullati: {annullati}</div>}
+          </div>
+        );
+      })()}
 
       {/* ══ Banner successo ═══════════════════════════════════════════════════════ */}
       {isMounted && showBanner && createPortal(
