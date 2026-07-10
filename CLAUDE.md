@@ -32,18 +32,15 @@ Regole operative per Claude Code nel progetto Gestionale Sartoria (`pants-manage
 
 ---
 
-## Struttura prompt in arrivo
+## Workflow
 
-```
-CONTESTO          — branch e obiettivo
-FILE DA TOCCARE   — path completi
-FILE DA NON TOCCARE
-IMPLEMENTAZIONE   — dettagli specifici
-CRITERI DI ACCETTAZIONE
-```
+- **Q&A prima del codice:** solo se la richiesta è ambigua — altrimenti si procede diretto
+- **Prompt compatti** (no 5 sezioni fisse): obiettivo breve, file da toccare, punti implementativi chiave (no snippet lunghi), 1-3 criteri di accettazione
+- **Autonomia su micro-scelte** implementative (naming, struttura interna file) senza chiedere conferma
+- **Conferma utente richiesta solo per:** operazioni Git (commit/push), deploy, modifiche RLS, modifiche schema DB
 
 **Primo comando sempre:** `git checkout <branch> && git status`
-**Report finale:** esito build · file modificati · criteri soddisfatti
+**Report finale (max 3 righe, non narrativo):** esito build · file modificati · criteri soddisfatti
 
 ---
 
