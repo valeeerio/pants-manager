@@ -59,6 +59,14 @@ export default function PaymentsPage() {
   const [filterStato, setFilterStato] = useState("TUTTI")
   const [filterMetodo, setFilterMetodo] = useState("TUTTI")
 
+  // Pre-applica filtro stato se URL contiene ?stato=<valore>
+  useEffect(() => {
+    const stato = new URLSearchParams(window.location.search).get("stato")
+    if (stato && ["UNPAID", "DEPOSIT_PAID", "PAID"].includes(stato)) {
+      setFilterStato(stato)
+    }
+  }, [])
+
   useEffect(() => {
     async function fetchPagamenti() {
       try {

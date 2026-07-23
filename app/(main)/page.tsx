@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Scissors, CalendarCheck, Banknote, Users, Bell, ArrowRight } from "lucide-react";
+import { Scissors, CalendarCheck, Banknote, Wallet } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/metric-card";
+import {
+  KpiModals,
+  type KpiModalTipo,
+  type DettaglioAttivi,
+  type Consegne,
+  type DaIncassareRiga,
+  type PagamentoMese,
+} from "@/components/dashboard/kpi-modals";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Topbar } from "@/components/layout/topbar";
 import { NotificationBanner } from "@/components/ui/notification-banner";
+import { LavoroDetailModal } from "@/components/lavori/lavoro-detail-modal";
 
-const icons = [Scissors, CalendarCheck, Banknote, Users];
+const icons = [Scissors, CalendarCheck, Banknote, Wallet];
 
 const MESI_IT = [
   "gen", "feb", "mar", "apr", "mag", "giu",
@@ -33,7 +39,18 @@ function formatEur(n: number | null): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 }
 
-type LavoroRecente = {
+function classeUrgenza(iso: string | null): string {
+  if (!iso) return "text-slate-700";
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+  const scadenza = new Date(iso + "T00:00:00");
+  const giorni = Math.round((scadenza.getTime() - oggi.getTime()) / 86400000);
+  if (giorni <= 0) return "text-red-600";
+  if (giorni <= 3) return "text-amber-700";
+  return "text-slate-700";
+}
+
+type ProssimaScadenza = {
   id: string;
   code: string;
   clientName: string;
@@ -44,13 +61,26 @@ type LavoroRecente = {
   price: number | null;
 };
 
-type Scadenza = {
+function giorniDa(iso: string): number {
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+  const inizio = new Date(iso + "T00:00:00");
+  return Math.max(0, Math.round((oggi.getTime() - inizio.getTime()) / 86400000));
+}
+
+const PAGAMENTO_BADGE: Record<string, { label: string; className: string }> = {
+  DEPOSIT_PAID: { label: "Acconto", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  UNPAID: { label: "Da pagare", className: "bg-stone-50 text-stone-600 border-stone-200" },
+};
+
+type ProntoDaRitirare = {
   id: string;
   code: string;
   clientName: string;
-  dueDate: string | null;
-  status: string;
-  statusRaw: string;
+  type: string;
+  price: number | null;
+  prontoDa: string;
+  pagamento: "DEPOSIT_PAID" | "UNPAID";
 };
 
 type DistribuzioneTipo = {
@@ -66,70 +96,127 @@ type DashboardData = {
     consegneOggi: number;
     daIncassare: number;
     clientiTotali: number;
+    lavoriInLavorazione: number;
+    consegneSettimana: number;
+    lavoriDaSaldare: number;
+    clientiNuoviMese: number;
+    incassatoMese: number;
   };
-  lavoriRecenti: LavoroRecente[];
-  scadenzeSettimana: Scadenza[];
+  scaduti: ProssimaScadenza[];
+  inArrivo: ProssimaScadenza[];
+  prontiDaRitirare: ProntoDaRitirare[];
   distribuzioneTipi: DistribuzioneTipo[];
+  dettaglioAttivi: DettaglioAttivi;
+  consegne: Consegne;
+  daIncassareLista: DaIncassareRiga[];
+  incassatoMeseLista: PagamentoMese[];
 };
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
+  const [lavoroApertoId, setLavoroApertoId] = useState<string | null>(null);
+  const [kpiModalAperto, setKpiModalAperto] = useState<KpiModalTipo | null>(null);
+
+  async function caricaDashboard() {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/dashboard");
+      if (!res.ok) throw new Error("Errore nel caricamento della dashboard");
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error(err);
+      setNotification({ type: "error", message: "Impossibile caricare i dati della dashboard. Riprova." });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function caricaDashboard() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/dashboard");
-        if (!res.ok) throw new Error("Errore nel caricamento della dashboard");
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error(err);
-        setNotification({ type: "error", message: "Impossibile caricare i dati della dashboard. Riprova." });
-      } finally {
-        setLoading(false);
-      }
-    }
     caricaDashboard();
   }, []);
 
+  function renderRigaLavoro(job: ProssimaScadenza, scaduto: boolean) {
+    return (
+      <TableRow
+        key={job.id}
+        onClick={() => setLavoroApertoId(job.id)}
+        className={`cursor-pointer border-b border-slate-100/60 transition-colors ${
+          scaduto ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50/60"
+        }`}
+      >
+        <TableCell className="px-5 py-3 font-mono text-[12px] font-normal text-slate-400">
+          {job.code}
+        </TableCell>
+        <TableCell className="py-3 text-[13px] font-semibold text-slate-800">
+          {job.clientName}
+        </TableCell>
+        <TableCell className="min-w-44 py-3 text-[13px] text-slate-600">{job.type}</TableCell>
+        <TableCell className="py-3">
+          <StatusBadge status={job.status} />
+        </TableCell>
+        <TableCell className={`py-3 text-[13px] font-semibold ${classeUrgenza(job.dueDate)}`}>
+          {formatDataIt(job.dueDate)}
+        </TableCell>
+        <TableCell className="py-3 pr-5 text-right text-[13px] font-semibold text-slate-800">
+          {formatEur(job.price)}
+        </TableCell>
+      </TableRow>
+    );
+  }
+
   const metrics = data
     ? [
-        { label: "Lavori attivi", value: String(data.kpi.lavoriAttivi), change: "In corso al laboratorio" },
-        { label: "Consegne oggi", value: String(data.kpi.consegneOggi), change: "Da consegnare entro oggi" },
-        { label: "Da incassare", value: formatEur(data.kpi.daIncassare), change: "Lavori non ancora pagati" },
-        { label: "Clienti registrati", value: String(data.kpi.clientiTotali), change: "Totale anagrafica" },
+        {
+          label: "Lavori attivi",
+          value: String(data.kpi.lavoriAttivi),
+          change: `${data.kpi.lavoriInLavorazione} in lavorazione`,
+          tipo: "attivi" as const,
+        },
+        {
+          label: "Consegne oggi",
+          value: String(data.kpi.consegneOggi),
+          change: `${data.kpi.consegneSettimana} nei prossimi 7 giorni`,
+          tipo: "consegne" as const,
+        },
+        {
+          label: "Da incassare",
+          value: formatEur(data.kpi.daIncassare),
+          change: `${data.kpi.lavoriDaSaldare} lavori da saldare`,
+          tipo: "incassare" as const,
+        },
+        {
+          label: "Incassato questo mese",
+          value: formatEur(data.kpi.incassatoMese),
+          change: `${data.incassatoMeseLista.length} pagamenti registrati`,
+          tipo: "incassato" as const,
+        },
       ]
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 lg:h-[calc(100vh-3rem-61px)]">
       {notification && (
-        <NotificationBanner
-          type={notification.type}
-          message={notification.message}
-          onDismiss={() => setNotification(null)}
-        />
+        <div className="shrink-0">
+          <NotificationBanner
+            type={notification.type}
+            message={notification.message}
+            onDismiss={() => setNotification(null)}
+          />
+        </div>
       )}
 
-      <div className="-mx-4 -mt-6 mb-6 sm:-mx-6 lg:-mx-8">
-        <Topbar />
+      <div className="shrink-0">
+        <PageHeader
+          title="Dashboard"
+          description="Riepilogo dei lavori, consegne e pagamenti del laboratorio."
+        />
       </div>
 
-      <PageHeader
-        title="Dashboard"
-        description="Riepilogo dei lavori, consegne e pagamenti del laboratorio."
-        actions={
-          <Button className="bg-amber-700 text-white shadow-sm shadow-amber-900/25 hover:bg-amber-800 hover:shadow-amber-glow active:scale-[0.98]">
-            Nuovo lavoro
-          </Button>
-        }
-      />
-
-      {/* Sezione 1 — 4 metric cards con TiltCard 3D */}
-      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Sezione 1 — 4 metric cards */}
+      <section className="grid shrink-0 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {loading && !data
           ? icons.map((Icon, index) => (
               <MetricCard key={index} label="—" value="—" change="Caricamento…" icon={Icon} />
@@ -143,18 +230,19 @@ export default function DashboardPage() {
                   value={metric.value}
                   change={metric.change}
                   icon={Icon}
+                  onClick={() => setKpiModalAperto(metric.tipo)}
                 />
               );
             })}
       </section>
 
       {/* Sezione 2 — Tabella lavori + Scadenze */}
-      <section className="grid gap-3.5 xl:grid-cols-[1.85fr_1fr]">
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-[13px] font-semibold text-slate-800">Lavori recenti</CardTitle>
+      <section className="grid gap-3.5 xl:grid-cols-[1.85fr_1fr] lg:flex-1 lg:min-h-0">
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="shrink-0 pb-0">
+            <CardTitle className="text-[13px] font-semibold text-slate-800">Prossime scadenze</CardTitle>
           </CardHeader>
-          <CardContent className="px-0 pb-0">
+          <CardContent className="px-0 pb-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-slate-100 hover:bg-transparent">
@@ -186,121 +274,123 @@ export default function DashboardPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && data?.lavoriRecenti.length === 0 && (
+                {!loading && data?.scaduti.length === 0 && data?.inArrivo.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-slate-400">
-                      <p className="text-sm">Nessun lavoro recente.</p>
+                      <p className="text-sm">Nessuna scadenza in programma.</p>
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading &&
-                  data?.lavoriRecenti.map((job) => (
-                    <TableRow
-                      key={job.id}
-                      className="border-b border-slate-100/60 transition-colors hover:bg-slate-50/60"
-                    >
-                      <TableCell className="px-5 py-3 font-mono text-[12px] font-semibold text-slate-600">
-                        {job.code}
-                      </TableCell>
-                      <TableCell className="py-3 text-[13px] font-medium text-slate-800">
-                        {job.clientName}
-                      </TableCell>
-                      <TableCell className="min-w-44 py-3 text-[13px] text-slate-600">{job.type}</TableCell>
-                      <TableCell className="py-3">
-                        <StatusBadge status={job.status} />
-                      </TableCell>
-                      <TableCell className="py-3 text-[12px] text-slate-500">
-                        {formatDataIt(job.dueDate)}
-                      </TableCell>
-                      <TableCell className="py-3 pr-5 text-right text-[13px] font-semibold text-slate-800">
-                        {formatEur(job.price)}
+                {!loading && data && data.scaduti.length > 0 && (
+                  <>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={6}
+                        className="bg-red-50/60 px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-red-700"
+                      >
+                        Scaduti · {data.scaduti.length}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {data.scaduti.map((j) => renderRigaLavoro(j, true))}
+                  </>
+                )}
+                {!loading && data && data.scaduti.length > 0 && data.inArrivo.length > 0 && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={6} className="h-3 border-0 p-0" />
+                  </TableRow>
+                )}
+                {!loading && data && data.inArrivo.length > 0 && (
+                  <>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={6}
+                        className="bg-slate-50 px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"
+                      >
+                        Prossime consegne
+                      </TableCell>
+                    </TableRow>
+                    {data.inArrivo.map((j) => renderRigaLavoro(j, false))}
+                  </>
+                )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
 
-            <div className="border-t border-slate-100 px-5 py-3">
-              <Link
-                href="/lavori"
-                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-700 transition-colors hover:text-amber-800"
-              >
-                Vedi tutti i lavori
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="shrink-0 pb-3">
+            <CardTitle className="text-[13px] font-semibold text-slate-800">
+              Pronti da ritirare
+              {!loading && data && data.prontiDaRitirare.length > 0 && (
+                <span className="text-slate-400"> · {data.prontiDaRitirare.length}</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+            <div className="space-y-2">
+              {loading && <p className="px-1 py-4 text-[13px] text-slate-400">Caricamento…</p>}
+              {!loading && data?.prontiDaRitirare.length === 0 && (
+                <p className="px-1 py-4 text-[13px] text-slate-400">Nessun lavoro in attesa di ritiro.</p>
+              )}
+              {!loading &&
+                data?.prontiDaRitirare.map((item) => {
+                  const giorni = giorniDa(item.prontoDa);
+                  const badge = PAGAMENTO_BADGE[item.pagamento];
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setLavoroApertoId(item.id)}
+                      className="group flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/50 px-3 py-2.5 transition-all duration-150 hover:border-slate-200 hover:bg-white hover:shadow-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-semibold text-slate-800">{item.clientName}</p>
+                        <p className="truncate text-[11px] text-slate-400 mt-0.5">
+                          {item.code} · {item.type}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span
+                          className={`text-[11px] font-medium ${giorni >= 7 ? "text-amber-700" : "text-slate-500"}`}
+                        >
+                          {giorni === 0 ? "Pronto oggi" : `Pronto da ${giorni} giorn${giorni === 1 ? "o" : "i"}`}
+                        </span>
+                        <span
+                          className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+                        >
+                          {badge.label}
+                          {item.price != null && ` · ${formatEur(item.price)}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>In scadenza questa settimana</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pb-4">
-            {loading && <p className="px-1 py-4 text-[13px] text-slate-400">Caricamento…</p>}
-            {!loading && data?.scadenzeSettimana.length === 0 && (
-              <p className="px-1 py-4 text-[13px] text-slate-400">Nessuna scadenza nei prossimi 7 giorni.</p>
-            )}
-            {!loading &&
-              data?.scadenzeSettimana.map((item) => (
-                <div
-                  key={item.id}
-                  className="group flex items-start justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/50 px-3 py-2.5 transition-all duration-150 hover:border-slate-200 hover:bg-white hover:shadow-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-slate-800">{item.clientName}</p>
-                    <p className="truncate text-[11px] text-slate-400 mt-0.5">{item.code}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className="text-[11px] font-semibold text-amber-700">{formatDataIt(item.dueDate)}</span>
-                    <StatusBadge status={item.status} />
-                  </div>
-                </div>
-              ))}
-          </CardContent>
-        </Card>
       </section>
 
-      {/* Sezione 3 — Tipologie di produzione */}
-      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        {(loading ? [] : data?.distribuzioneTipi ?? []).map((item) => (
-          <Card key={item.typeRaw} className="group">
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-[13px] font-medium text-slate-600">{item.type}</span>
-                <span className="text-[22px] font-bold tracking-[-0.04em] text-slate-900">
-                  {item.percentuale}
-                  <span className="text-sm font-medium text-slate-400">%</span>
-                </span>
-              </div>
-              {/* Track */}
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-700"
-                  style={{ width: `${item.percentuale}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <KpiModals
+        tipo={kpiModalAperto}
+        dettaglioAttivi={data?.dettaglioAttivi ?? null}
+        consegne={data?.consegne ?? null}
+        daIncassareLista={data?.daIncassareLista ?? null}
+        incassatoMeseLista={data?.incassatoMeseLista ?? null}
+        totaleDaIncassare={data?.kpi.daIncassare ?? 0}
+        totaleIncassato={data?.kpi.incassatoMese ?? 0}
+        onClose={() => setKpiModalAperto(null)}
+        onApriLavoro={(id) => {
+          setKpiModalAperto(null);
+          setLavoroApertoId(id);
+        }}
+      />
 
-      {/* Sezione 4 — Promemoria premium */}
-      <Card className="border-amber-200/50 bg-gradient-to-r from-amber-50 to-orange-50/40">
-        <CardContent className="flex items-center gap-4 p-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200/60">
-            <Bell className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-amber-900">Promemoria</p>
-            <p className="text-[12px] text-amber-800/70 mt-0.5">
-              {loading
-                ? "Caricamento…"
-                : `${data?.kpi.consegneOggi ?? 0} consegn${data?.kpi.consegneOggi === 1 ? "a prevista" : "e previste"} oggi`}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <LavoroDetailModal
+        projectId={lavoroApertoId}
+        onClose={() => {
+          setLavoroApertoId(null);
+          caricaDashboard();
+        }}
+      />
     </div>
   );
 }
