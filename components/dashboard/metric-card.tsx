@@ -1,21 +1,20 @@
 import { LucideIcon, TrendingDown, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { TiltCard } from "@/components/ui/tilt-card";
 
 type MetricCardProps = {
   label: string;
   value: string;
   change: string;
   icon: LucideIcon;
+  onClick?: () => void;
 };
 
-export function MetricCard({ label, value, change, icon: Icon }: MetricCardProps) {
+export function MetricCard({ label, value, change, icon: Icon, onClick }: MetricCardProps) {
   const isPositive = change.startsWith("+");
   const isNegative = change.startsWith("-") && !change.includes("invariato");
 
-  return (
-    <TiltCard>
-      <Card className="relative overflow-hidden">
+  const card = (
+    <Card className="relative overflow-hidden">
         {/* Subtle gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/60" />
 
@@ -43,8 +42,15 @@ export function MetricCard({ label, value, change, icon: Icon }: MetricCardProps
               <span>{change}</span>
             </div>
           </CardContent>
-        </div>
-      </Card>
-    </TiltCard>
+      </div>
+    </Card>
+  );
+
+  return onClick ? (
+    <div onClick={onClick} className="block">
+      {card}
+    </div>
+  ) : (
+    card
   );
 }

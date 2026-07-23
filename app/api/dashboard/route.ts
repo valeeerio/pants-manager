@@ -21,7 +21,18 @@ const TYPE_MAP: Record<string, string> = {
   OTHER: "Altro",
 };
 
-const LAVORI_RECENTI_LIMIT = 5;
+const SCADUTI_LIMIT = 3;
+const IN_ARRIVO_LIMIT = 5;
+
+const LAVORO_SELECT = {
+  id: true,
+  code: true,
+  type: true,
+  status: true,
+  dueDate: true,
+  price: true,
+  client: { select: { firstName: true, lastName: true } },
+} as const;
 
 export async function GET() {
   const session = await auth();
@@ -36,6 +47,7 @@ export async function GET() {
     inizioDomani.setDate(inizioDomani.getDate() + 1);
     const traSetteGiorni = new Date(inizioOggi);
     traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
+    const inizioMese = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const lavoriAttiviQuery = prisma.project.count({
       where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
@@ -50,28 +62,98 @@ export async function GET() {
       },
     });
     const clientiTotaliQuery = prisma.client.count();
-    const lavoriRecentiQuery = prisma.project.findMany({
-      orderBy: { createdAt: "desc" },
-      take: LAVORI_RECENTI_LIMIT,
+    const lavoriInLavorazioneQuery = prisma.project.count({
+      where: { status: "IN_PROGRESS" },
+    });
+    const consegneSettimanaQuery = prisma.project.count({
+      where: { dueDate: { gte: inizioOggi, lt: traSetteGiorni } },
+    });
+    const clientiNuoviMeseQuery = prisma.client.count({
+      where: { createdAt: { gte: inizioMese } },
+    });
+    const scadutiQuery = prisma.project.findMany({
+      where: {
+        dueDate: { lt: inizioOggi },
+        status: { notIn: ["COMPLETED", "CANCELLED"] },
+      },
+      orderBy: { dueDate: "asc" },
+      take: SCADUTI_LIMIT,
+      select: LAVORO_SELECT,
+    });
+    const inArrivoQuery = prisma.project.findMany({
+      where: {
+        dueDate: { gte: inizioOggi },
+        status: { notIn: ["COMPLETED", "CANCELLED"] },
+      },
+      orderBy: { dueDate: "asc" },
+      take: IN_ARRIVO_LIMIT,
+      select: LAVORO_SELECT,
+    });
+    const prontiQuery = prisma.project.findMany({
+      where: { status: "COMPLETED", payments: { none: { status: "PAID" } } },
+      orderBy: { updatedAt: "asc" },
       select: {
         id: true,
         code: true,
         type: true,
-        status: true,
-        dueDate: true,
         price: true,
+        updatedAt: true,
         client: { select: { firstName: true, lastName: true } },
+        payments: { select: { status: true } },
       },
     });
-    const scadenzeSettimanaQuery = prisma.project.findMany({
-      where: { dueDate: { gte: inizioOggi, lte: traSetteGiorni } },
+    const attiviListaQuery = prisma.project.findMany({
+      where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
+      orderBy: { dueDate: "asc" },
+      select: LAVORO_SELECT,
+    });
+    const daIniziareQuery = prisma.project.count({ where: { status: "TODO" } });
+    const inAttesaQuery = prisma.project.count({
+      where: { status: "WAITING_CUSTOMER" },
+    });
+    const consegneOggiListaQuery = prisma.project.findMany({
+      where: {
+        dueDate: { gte: inizioOggi, lt: inizioDomani },
+        status: { not: "CANCELLED" },
+      },
+      orderBy: { dueDate: "asc" },
+      select: LAVORO_SELECT,
+    });
+    const consegneSettimanaListaQuery = prisma.project.findMany({
+      where: {
+        dueDate: { gte: inizioDomani, lt: traSetteGiorni },
+        status: { not: "CANCELLED" },
+      },
+      orderBy: { dueDate: "asc" },
+      select: LAVORO_SELECT,
+    });
+    const daIncassareListaQuery = prisma.project.findMany({
+      where: {
+        price: { gt: 0 },
+        payments: { none: { status: "PAID" } },
+      },
       orderBy: { dueDate: "asc" },
       select: {
+        ...LAVORO_SELECT,
+        payments: { select: { status: true } },
+      },
+    });
+    const incassatoMeseQuery = prisma.payment.findMany({
+      where: { status: "PAID", paidAt: { gte: inizioMese } },
+      orderBy: { paidAt: "desc" },
+      select: {
         id: true,
-        code: true,
-        status: true,
-        dueDate: true,
-        client: { select: { firstName: true, lastName: true } },
+        projectId: true,
+        method: true,
+        paidAt: true,
+        project: {
+          select: {
+            code: true,
+            type: true,
+            price: true,
+            client: { select: { firstName: true, lastName: true } },
+          },
+        },
       },
     });
     const distribuzioneQuery = prisma.project.groupBy({
@@ -85,17 +167,39 @@ export async function GET() {
       consegneOggiCount,
       progettiPerIncasso,
       clientiTotaliCount,
-      lavoriRecentiRaw,
-      scadenzeSettimanaRaw,
+      lavoriInLavorazioneCount,
+      consegneSettimanaCount,
+      clientiNuoviMeseCount,
+      scadutiRaw,
+      inArrivoRaw,
+      prontiRaw,
       distribuzioneRaw,
+      attiviListaRaw,
+      daIniziareCount,
+      inAttesaCount,
+      consegneOggiListaRaw,
+      consegneSettimanaListaRaw,
+      daIncassareListaRaw,
+      incassatoMeseRaw,
     ] = await prisma.$transaction([
       lavoriAttiviQuery,
       consegneOggiQuery,
       progettiPerIncassoQuery,
       clientiTotaliQuery,
-      lavoriRecentiQuery,
-      scadenzeSettimanaQuery,
+      lavoriInLavorazioneQuery,
+      consegneSettimanaQuery,
+      clientiNuoviMeseQuery,
+      scadutiQuery,
+      inArrivoQuery,
+      prontiQuery,
       distribuzioneQuery,
+      attiviListaQuery,
+      daIniziareQuery,
+      inAttesaQuery,
+      consegneOggiListaQuery,
+      consegneSettimanaListaQuery,
+      daIncassareListaQuery,
+      incassatoMeseQuery,
     ]);
 
     const daIncassare = progettiPerIncasso.reduce((sum, p) => {
@@ -103,7 +207,12 @@ export async function GET() {
       return pagato ? sum : sum + (p.price ?? 0);
     }, 0);
 
-    const lavoriRecenti = lavoriRecentiRaw.map((l) => ({
+    const lavoriDaSaldare = progettiPerIncasso.filter(
+      (p) =>
+        !p.payments.some((pay) => pay.status === "PAID") && (p.price ?? 0) > 0
+    ).length;
+
+    const mapLavoro = (l: (typeof scadutiRaw)[number]) => ({
       id: l.id,
       code: l.code,
       clientName: `${l.client.firstName} ${l.client.lastName}`,
@@ -112,15 +221,56 @@ export async function GET() {
       statusRaw: l.status,
       dueDate: l.dueDate?.toISOString().split("T")[0] ?? null,
       price: l.price ?? null,
+    });
+
+    const scaduti = scadutiRaw.map(mapLavoro);
+    const inArrivo = inArrivoRaw.map(mapLavoro);
+
+    const dettaglioAttivi = {
+      daIniziare: daIniziareCount,
+      inLavorazione: lavoriInLavorazioneCount,
+      inAttesa: inAttesaCount,
+      lavori: attiviListaRaw.map(mapLavoro),
+    };
+
+    const consegne = {
+      oggi: consegneOggiListaRaw.map(mapLavoro),
+      settimana: consegneSettimanaListaRaw.map(mapLavoro),
+    };
+
+    const daIncassareLista = daIncassareListaRaw.map((l) => ({
+      ...mapLavoro(l),
+      pagamento: l.payments.some((p) => p.status === "DEPOSIT_PAID")
+        ? "DEPOSIT_PAID"
+        : "UNPAID",
     }));
 
-    const scadenzeSettimana = scadenzeSettimanaRaw.map((l) => ({
+    const incassatoMeseLista = incassatoMeseRaw.map((p) => ({
+      id: p.id,
+      projectId: p.projectId,
+      clientName: `${p.project.client.firstName} ${p.project.client.lastName}`,
+      code: p.project.code,
+      type: TYPE_MAP[p.project.type] ?? p.project.type,
+      price: p.project.price ?? null,
+      method: p.method,
+      paidAt: p.paidAt?.toISOString().split("T")[0] ?? null,
+    }));
+
+    const incassatoMese = incassatoMeseRaw.reduce(
+      (sum, p) => sum + (p.project.price ?? 0),
+      0
+    );
+
+    const prontiDaRitirare = prontiRaw.map((l) => ({
       id: l.id,
       code: l.code,
       clientName: `${l.client.firstName} ${l.client.lastName}`,
-      dueDate: l.dueDate?.toISOString().split("T")[0] ?? null,
-      status: STATUS_MAP[l.status] ?? l.status,
-      statusRaw: l.status,
+      type: TYPE_MAP[l.type] ?? l.type,
+      price: l.price ?? null,
+      prontoDa: l.updatedAt.toISOString().split("T")[0],
+      pagamento: l.payments.some((p) => p.status === "DEPOSIT_PAID")
+        ? "DEPOSIT_PAID"
+        : "UNPAID",
     }));
 
     const totaleLavori = distribuzioneRaw.reduce(
@@ -143,10 +293,20 @@ export async function GET() {
         consegneOggi: consegneOggiCount,
         daIncassare,
         clientiTotali: clientiTotaliCount,
+        lavoriInLavorazione: lavoriInLavorazioneCount,
+        consegneSettimana: consegneSettimanaCount,
+        clientiNuoviMese: clientiNuoviMeseCount,
+        lavoriDaSaldare,
+        incassatoMese,
       },
-      lavoriRecenti,
-      scadenzeSettimana,
+      scaduti,
+      inArrivo,
+      prontiDaRitirare,
       distribuzioneTipi,
+      dettaglioAttivi,
+      consegne,
+      daIncassareLista,
+      incassatoMeseLista,
     });
   } catch (error) {
     console.error("Errore GET /api/dashboard:", error);
