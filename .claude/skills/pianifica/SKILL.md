@@ -17,7 +17,7 @@ Sostituisce la fase di design Q&A che avveniva su Claude.ai — ora dentro Claud
 ## Processo
 
 1. Leggi la richiesta (l'argomento passato a `/pianifica`, altrimenti chiedi "Cosa vuoi costruire?").
-2. Esplora il codebase per pattern pertinenti già esistenti (Grep/Read su `app/`, `components/`, `prisma/schema.prisma`) — mai assumere prima di aver verificato. Cita nel brief i componenti/route riutilizzabili trovati invece di riproporre da zero (es. `NotificationBanner`, mapping enum `*_MAP`, pattern modal con `createPortal`).
+2. Esplora il codebase per pattern pertinenti già esistenti (Grep/Read su `app/`, `components/`, `prisma/schema.prisma`) — mai assumere prima di aver verificato. Cita nel brief i componenti/route riutilizzabili trovati invece di riproporre da zero (es. `NotificationBanner`, mapping enum `*_MAP`, pattern modal con `createPortal`, modal dettaglio lavoro condiviso `components/lavori/lavoro-detail-modal.tsx` + tipi in `lavoro-shared.tsx`, modal KPI `components/dashboard/kpi-modals.tsx`, sistema notifiche `app/api/notifiche/` + `components/layout/notifiche-dropdown.tsx`).
 3. Usa `AskUserQuestion` a batch (poche domande per volta, non tutte insieme), per chiarire:
    - Scope esatto (dentro/fuori).
    - Decisioni UI: pagina nuova vs modal vs sezione esistente; quali campi; quali enum/stati coinvolti.

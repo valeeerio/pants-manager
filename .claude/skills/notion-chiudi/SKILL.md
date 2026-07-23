@@ -2,19 +2,15 @@
 name: notion-chiudi
 description: Scrive su Notion un riepilogo di cosa è cambiato in questa sessione, per mantenere Notion come source of truth del progetto. Invocare manualmente con /notion-chiudi prima di chiudere la sessione.
 disable-model-invocation: true
-allowed-tools: Read, Bash(git status:*), Bash(git diff:*), Bash(git log:*), notion-fetch, notion-update-page, notion-create-comment
+allowed-tools: Read, Bash(git status:*), Bash(git diff:*), Bash(git log:*), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-comment
 ---
 
 # Notion Chiudi
 
-<!--
-VERIFICA PRIMA DELL'USO: come per notion-avvia, controlla con `/mcp` il prefisso
-reale dei tool MCP Notion nel tuo ambiente e allinea "allowed-tools" se necessario.
--->
-
 ## Target Notion
 
-Stesso target di `notion-avvia`, letto da `.claude/notion-config.json`.
+Stesso target di `notion-avvia`, letto da `.claude/notion-config.json`
+(usare `pageOrDatabaseId`, non l'URL).
 
 ## Ambito: cosa va su Notion e cosa no
 
@@ -33,9 +29,11 @@ proporre un riepilogo.
 
 ## Processo
 
-1. Ricostruisci cosa è cambiato in questa sessione, solo da git (sola lettura):
-   `git status`, `git diff --stat`, `git log` per i commit recenti non ancora
-   sincronizzati su Notion.
+1. Ricostruisci cosa è cambiato nella SESSIONE CORRENTE, solo da git (sola
+   lettura): `git status`, `git diff --stat`, `git log` limitato ai commit di
+   questa sessione (quelli creati o mergiati oggi durante la conversazione).
+   Non tentare di dedurre cosa sia "già sincronizzato" da sessioni passate:
+   in caso di dubbio elenca i commit e chiedi all'utente quali includere.
 2. Filtra: tieni solo modifiche a `app/`, `components/`, `lib/`, `prisma/` e
    decisioni di prodotto — scarta modifiche a `.claude/` o tooling (vedi sopra).
 3. Se resta qualcosa di pertinente, prepara un riepilogo breve: feature
