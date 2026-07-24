@@ -102,7 +102,21 @@ export async function PUT(
       );
     }
 
-    const titoloAuto = TYPE_MAP[type] ?? "Lavoro";
+    if (!(type in TYPE_MAP)) {
+      return NextResponse.json(
+        { error: "Tipo lavoro non valido" },
+        { status: 400 }
+      );
+    }
+
+    if (!(status in STATUS_MAP)) {
+      return NextResponse.json(
+        { error: "Stato non valido" },
+        { status: 400 }
+      );
+    }
+
+    const titoloAuto = TYPE_MAP[type];
 
     const lavoro = await prisma.project.update({
       where: { id },
