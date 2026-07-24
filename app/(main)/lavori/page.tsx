@@ -78,6 +78,12 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stageCounts, setStageCounts] = useState({
+    daIniziare: 0,
+    inLavorazione: 0,
+    inAttesaCliente: 0,
+    pronti: 0,
+  });
 
   // Filter + sort
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,18 +129,22 @@ export default function JobsPage() {
     async function caricaDati() {
       try {
         setLoading(true);
-        const [resLavori, resClienti] = await Promise.all([
+        const [resLavori, resClienti, resStageCounts] = await Promise.all([
           fetch("/api/lavori"),
           fetch("/api/clienti"),
+          fetch("/api/lavori/stage-counts"),
         ]);
         if (!resLavori.ok) throw new Error("Errore nel caricamento lavori");
         if (!resClienti.ok) throw new Error("Errore nel caricamento clienti");
-        const [lavori, clienti] = await Promise.all([
+        if (!resStageCounts.ok) throw new Error("Errore nel caricamento conteggi");
+        const [lavori, clienti, counts] = await Promise.all([
           resLavori.json(),
           resClienti.json(),
+          resStageCounts.json(),
         ]);
         setJobs(lavori);
         setClientiDisponibili(clienti);
+        setStageCounts(counts);
       } catch (err) {
         console.error(err);
         setError("Impossibile caricare i dati. Riprova.");
@@ -240,11 +250,11 @@ export default function JobsPage() {
   }, [jobs, searchQuery, filterStatus, filterType, filterDueDate, dateFrom, dateTo, sortBy, sortOrder]);
 
   const stages = useMemo(() => [
-    { label: "Da iniziare", count: jobs.filter((j) => j.statusRaw === "TODO").length },
-    { label: "In lavorazione", count: jobs.filter((j) => j.statusRaw === "IN_PROGRESS").length },
-    { label: "In attesa cliente", count: jobs.filter((j) => j.statusRaw === "WAITING_CUSTOMER").length },
-    { label: "Pronti", count: jobs.filter((j) => j.statusRaw === "COMPLETED").length },
-  ], [jobs]);
+    { label: "Da iniziare", count: stageCounts.daIniziare },
+    { label: "In lavorazione", count: stageCounts.inLavorazione },
+    { label: "In attesa cliente", count: stageCounts.inAttesaCliente },
+    { label: "Pronti", count: stageCounts.pronti },
+  ], [stageCounts]);
 
   function handleSort(col: SortKey) {
     if (sortBy === col) {
