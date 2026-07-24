@@ -11,6 +11,9 @@ function isPaymentMethod(v: string): v is PaymentMethod {
   return (Object.values(PaymentMethod) as string[]).includes(v)
 }
 
+// Limite di sicurezza sulla lista pagamenti
+const LISTA_LIMIT = 200
+
 // GET /api/pagamenti
 // Query params opzionali: projectId, status, method, dateFrom, dateTo
 export async function GET(request: NextRequest) {
@@ -66,6 +69,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: "desc" },
+      take: LISTA_LIMIT,
     })
 
     const pagamentiFormattati = pagamenti.map((p) => ({

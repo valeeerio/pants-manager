@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
+// Limite di sicurezza sulla lista clienti
+const LISTA_LIMIT = 200;
+
 export async function GET() {
   const session = await auth()
   if (!session) {
@@ -11,6 +14,7 @@ export async function GET() {
   try {
     const clienti = await prisma.client.findMany({
       orderBy: { createdAt: "desc" },
+      take: LISTA_LIMIT,
       include: {
         _count: {
           select: { projects: true },
