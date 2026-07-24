@@ -22,6 +22,9 @@ const TYPE_MAP: Record<string, string> = {
   OTHER: "Altro",
 };
 
+// Limite di sicurezza: la tabella mostra i lavori recenti, non l'archivio intero
+const LISTA_LIMIT = 200;
+
 export async function GET() {
   const session = await auth()
   if (!session) {
@@ -31,6 +34,7 @@ export async function GET() {
   try {
     const lavori = await prisma.project.findMany({
       orderBy: { createdAt: "desc" },
+      take: LISTA_LIMIT,
       include: {
         client: {
           select: { firstName: true, lastName: true },

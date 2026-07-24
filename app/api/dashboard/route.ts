@@ -24,6 +24,8 @@ const TYPE_MAP: Record<string, string> = {
 
 const SCADUTI_LIMIT = 3;
 const IN_ARRIVO_LIMIT = 5;
+// Limite per le liste di dettaglio; i totali restano calcolati senza limite
+const LISTA_LIMIT = 100;
 
 const LAVORO_SELECT = {
   id: true,
@@ -91,6 +93,7 @@ export async function GET() {
     const prontiQuery = prisma.project.findMany({
       where: { status: "COMPLETED", payments: { none: { status: "PAID" } } },
       orderBy: { updatedAt: "asc" },
+      take: LISTA_LIMIT,
       select: {
         id: true,
         code: true,
@@ -104,6 +107,7 @@ export async function GET() {
     const attiviListaQuery = prisma.project.findMany({
       where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
       orderBy: { dueDate: "asc" },
+      take: LISTA_LIMIT,
       select: LAVORO_SELECT,
     });
     const daIniziareQuery = prisma.project.count({ where: { status: "TODO" } });
@@ -116,6 +120,7 @@ export async function GET() {
         status: { not: "CANCELLED" },
       },
       orderBy: { dueDate: "asc" },
+      take: LISTA_LIMIT,
       select: LAVORO_SELECT,
     });
     const consegneSettimanaListaQuery = prisma.project.findMany({
@@ -124,6 +129,7 @@ export async function GET() {
         status: { not: "CANCELLED" },
       },
       orderBy: { dueDate: "asc" },
+      take: LISTA_LIMIT,
       select: LAVORO_SELECT,
     });
     const daIncassareListaQuery = prisma.project.findMany({
@@ -133,6 +139,7 @@ export async function GET() {
         payments: { none: { status: "PAID" } },
       },
       orderBy: { dueDate: "asc" },
+      take: LISTA_LIMIT,
       select: {
         ...LAVORO_SELECT,
         payments: { select: { status: true } },
