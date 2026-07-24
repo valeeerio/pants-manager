@@ -81,7 +81,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const titoloAuto = TYPE_MAP[type] ?? "Lavoro";
+    if (!(type in TYPE_MAP)) {
+      return NextResponse.json(
+        { error: "Tipo lavoro non valido" },
+        { status: 400 }
+      );
+    }
+
+    const titoloAuto = TYPE_MAP[type];
 
     const MAX_TENTATIVI = 3;
     let lavoro = null;

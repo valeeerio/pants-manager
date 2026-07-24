@@ -3,6 +3,14 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { PaymentStatus, PaymentMethod } from "@prisma/client"
 
+function isPaymentStatus(v: string): v is PaymentStatus {
+  return (Object.values(PaymentStatus) as string[]).includes(v)
+}
+
+function isPaymentMethod(v: string): v is PaymentMethod {
+  return (Object.values(PaymentMethod) as string[]).includes(v)
+}
+
 // GET /api/pagamenti
 // Query params opzionali: projectId, status, method, dateFrom, dateTo
 export async function GET(request: NextRequest) {
@@ -18,6 +26,20 @@ export async function GET(request: NextRequest) {
     const method = searchParams.get("method")
     const dateFrom = searchParams.get("dateFrom")
     const dateTo = searchParams.get("dateTo")
+
+    if (status && !isPaymentStatus(status)) {
+      return NextResponse.json(
+        { error: "Stato pagamento non valido" },
+        { status: 400 }
+      )
+    }
+
+    if (method && !isPaymentMethod(method)) {
+      return NextResponse.json(
+        { error: "Metodo di pagamento non valido" },
+        { status: 400 }
+      )
+    }
 
     const pagamenti = await prisma.payment.findMany({
       where: {
@@ -86,6 +108,20 @@ export async function POST(request: NextRequest) {
     if (!projectId || !status) {
       return NextResponse.json(
         { error: "projectId e status sono obbligatori" },
+        { status: 400 }
+      )
+    }
+
+    if (!isPaymentStatus(status)) {
+      return NextResponse.json(
+        { error: "Stato pagamento non valido" },
+        { status: 400 }
+      )
+    }
+
+    if (method != null && !isPaymentMethod(method)) {
+      return NextResponse.json(
+        { error: "Metodo di pagamento non valido" },
         { status: 400 }
       )
     }
