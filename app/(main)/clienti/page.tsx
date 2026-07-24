@@ -228,6 +228,7 @@ export default function ClientiPage() {
   const [clienteLavoriLoading, setClienteLavoriLoading] = useState(false);
   const [clienteLavoriError, setClienteLavoriError] = useState<string | null>(null);
   const [clienteTotali, setClienteTotali] = useState<{ totaleSpeso: number; daIncassare: number } | null>(null);
+  const [statsClienti, setStatsClienti] = useState({ totale: 0, nuoviMese: 0, senzaLavoriAttivi: 0 });
 
   // ── Effects ───────────────────────────────────────────────────────────────────
 
@@ -237,10 +238,16 @@ export default function ClientiPage() {
     async function caricaClienti() {
       try {
         setLoading(true);
-        const res = await fetch("/api/clienti");
+        const [res, resStats] = await Promise.all([
+          fetch("/api/clienti"),
+          fetch("/api/clienti/stats"),
+        ]);
         if (!res.ok) throw new Error("Errore nel caricamento clienti");
+        if (!resStats.ok) throw new Error("Errore nel caricamento statistiche");
         const data = await res.json();
+        const stats = await resStats.json();
         setClienti(data);
+        setStatsClienti(stats);
       } catch (err) {
         console.error(err);
         setError("Impossibile caricare i clienti. Riprova.");
@@ -751,19 +758,7 @@ export default function ClientiPage() {
 
   // ── KPI cards ────────────────────────────────────────────────────────────────
 
-  const kpiClienti = useMemo(() => {
-    const now = new Date();
-    const meseCorrente = now.getMonth();
-    const annoCorrente = now.getFullYear();
-    return {
-      totale: clienti.length,
-      nuoviMese: clienti.filter((c) => {
-        const d = new Date(c.dataRegistrazione);
-        return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente;
-      }).length,
-      senzaLavoriAttivi: clienti.filter((c) => c.lavoriAttivi === 0).length,
-    };
-  }, [clienti]);
+  const kpiClienti = statsClienti;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 

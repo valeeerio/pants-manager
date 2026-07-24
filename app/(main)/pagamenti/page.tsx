@@ -52,8 +52,15 @@ function formatDate(dateStr: string | null): string {
   return `${day}/${month}/${year}`
 }
 
+type PagamentiStats = {
+  incassatoMese: number
+  inAttesa: number
+  accontiSospesi: number
+}
+
 export default function PaymentsPage() {
   const [pagamenti, setPagamenti] = useState<Pagamento[]>([])
+  const [stats, setStats] = useState<PagamentiStats>({ incassatoMese: 0, inAttesa: 0, accontiSospesi: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStato, setFilterStato] = useState("TUTTI")
@@ -70,10 +77,15 @@ export default function PaymentsPage() {
   useEffect(() => {
     async function fetchPagamenti() {
       try {
-        const res = await fetch("/api/pagamenti")
-        if (!res.ok) throw new Error("Risposta non valida")
-        const data: Pagamento[] = await res.json()
+        const [resPagamenti, resStats] = await Promise.all([
+          fetch("/api/pagamenti"),
+          fetch("/api/pagamenti/stats"),
+        ])
+        if (!resPagamenti.ok || !resStats.ok) throw new Error("Risposta non valida")
+        const data: Pagamento[] = await resPagamenti.json()
+        const statsData: PagamentiStats = await resStats.json()
         setPagamenti(data)
+        setStats(statsData)
       } catch {
         setError("Non è stato possibile caricare i pagamenti. Riprova tra un attimo.")
       } finally {
@@ -83,25 +95,7 @@ export default function PaymentsPage() {
     fetchPagamenti()
   }, [])
 
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-
-  const incassatoMese = pagamenti
-    .filter((p) => p.status === "PAID" && p.paidAt !== null)
-    .filter((p) => {
-      const [year, month] = (p.paidAt as string).split("-").map(Number)
-      return year === currentYear && month === currentMonth
-    })
-    .reduce((sum, p) => sum + p.amount, 0)
-
-  const inAttesa = pagamenti
-    .filter((p) => p.status === "UNPAID")
-    .reduce((sum, p) => sum + p.amount, 0)
-
-  const accontiSospesi = pagamenti
-    .filter((p) => p.status === "DEPOSIT_PAID")
-    .reduce((sum, p) => sum + p.amount, 0)
+  const { incassatoMese, inAttesa, accontiSospesi } = stats
 
   const filtrati = pagamenti.filter((p) => {
     if (filterStato !== "TUTTI" && p.status !== filterStato) return false
