@@ -502,8 +502,8 @@ export default function JobsPage() {
                 <option value="Accorciare gamba">Accorciare gamba</option>
                 <option value="Allargare pantalone">Allargare pantalone</option>
                 <option value="Sostituzione zip">Sostituzione zip</option>
-                <option value="Riparazione strappo">Riparazione strappo</option>
-                <option value="Pantalone su misura">Pantalone su misura</option>
+                <option value="Riparazione">Riparazione</option>
+                <option value="Su misura">Su misura</option>
                 <option value="Altro">Altro</option>
               </select>
             </div>
@@ -623,7 +623,7 @@ export default function JobsPage() {
               {!loading && !error && visibleJobs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="py-8 text-center text-slate-400"
                   >
                     Nessun lavoro trovato con i filtri selezionati.

@@ -47,6 +47,7 @@ export async function GET(
       return pagato ? sum + (p.price ?? 0) : sum;
     }, 0);
     const daIncassare = cliente.projects.reduce((sum, p) => {
+      if (p.status === "CANCELLED") return sum;
       const pagato = p.payments.some((pay) => pay.status === "PAID");
       return pagato ? sum : sum + (p.price ?? 0);
     }, 0);

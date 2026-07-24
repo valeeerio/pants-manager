@@ -56,6 +56,7 @@ export async function GET() {
       where: { dueDate: { gte: inizioOggi, lt: inizioDomani } },
     });
     const progettiPerIncassoQuery = prisma.project.findMany({
+      where: { status: { not: "CANCELLED" } },
       select: {
         price: true,
         payments: { select: { status: true } },
@@ -130,6 +131,7 @@ export async function GET() {
     const daIncassareListaQuery = prisma.project.findMany({
       where: {
         price: { gt: 0 },
+        status: { not: "CANCELLED" },
         payments: { none: { status: "PAID" } },
       },
       orderBy: { dueDate: "asc" },
