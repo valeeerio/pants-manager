@@ -8,7 +8,7 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 - [x] [alta] Validazione enum negli input API (`type`, `status`, `method`): valore invalido → 400, oggi 500 Prisma — `app/api/lavori/route.ts`, `app/api/lavori/[id]/route.ts`, `app/api/pagamenti/route.ts` (revisione 2026-07-24 · fatto PR #11, 2026-07-24)
 - [x] [alta] Banner errore quando la creazione lavoro fallisce (oggi solo `console.error`) — `app/(main)/lavori/page.tsx` (revisione 2026-07-24 · fatto PR #10, 2026-07-24)
 - [x] [media] Blocco pagamenti duplicati per lo stesso `projectId` (gonfiano `incassatoMese`; il modal legge solo `data[0]`) — `app/api/pagamenti/route.ts` (revisione 2026-07-24 · fatto PR blocco-pagamenti-duplicati, 2026-07-24)
-- [ ] [media] Pulsante "Esporta" senza handler: implementare o rimuovere — `app/(main)/pagamenti/page.tsx` (revisione 2026-07-24)
+- [x] [media] Pulsante "Esporta" senza handler: implementare o rimuovere — export CSV client-side dei pagamenti filtrati — `app/(main)/pagamenti/page.tsx` (revisione 2026-07-24 · fatto 2026-07-24)
 - [x] [bassa] Timezone `dueDate`: salvata UTC, confronti "oggi" in locale → possibili off-by-one — `lib/date.ts` (helper Europe/Rome), `app/api/dashboard/route.ts`, `app/api/notifiche/route.ts`; lato client già coerente (revisione 2026-07-24 · fatto 2026-07-24)
 - [x] [bassa] Paginazione/`take` sulle liste che caricano intere tabelle — `take` con limiti fissi (100 liste dashboard, 200 lavori/pagamenti/clienti); i totali/aggregati restano senza limite — `app/api/dashboard/route.ts`, `app/api/lavori/route.ts`, `app/api/pagamenti/route.ts`, `app/api/clienti/route.ts` (revisione 2026-07-24 · fatto 2026-07-24)
 

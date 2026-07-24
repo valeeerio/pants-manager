@@ -103,6 +103,31 @@ export default function PaymentsPage() {
     return true
   })
 
+  function esportaCsv() {
+    const intestazioni = ["Data", "Cliente", "Codice lavoro", "Lavoro", "Metodo", "Stato", "Importo"]
+    const righe = filtrati.map((p) => [
+      formatDate(p.paidAt ?? p.createdAt),
+      p.clientName,
+      p.projectCode,
+      p.projectTitle,
+      p.method ? METHOD_LABEL[p.method] ?? p.method : "",
+      STATUS_LABEL[p.status],
+      p.amount.toFixed(2).replace(".", ","),
+    ])
+    const escapeCsv = (v: string) => `"${v.replace(/"/g, '""')}"`
+    const csv = [intestazioni, ...righe]
+      .map((riga) => riga.map(escapeCsv).join(";"))
+      .join("\r\n")
+    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    const oggi = new Date().toISOString().split("T")[0]
+    link.href = url
+    link.download = `pagamenti-${oggi}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const kpiCards = [
     { label: "Incassato questo mese", value: formatEuro(incassatoMese), icon: Banknote, positive: true as boolean | null },
     { label: "In attesa", value: formatEuro(inAttesa), icon: TrendingDown, positive: false as boolean | null },
@@ -115,7 +140,7 @@ export default function PaymentsPage() {
         title="Pagamenti"
         description="Incassi, acconti e saldi collegati alle commesse del laboratorio."
         actions={
-          <Button variant="outline">
+          <Button variant="outline" onClick={esportaCsv} disabled={filtrati.length === 0}>
             <Download className="h-3.5 w-3.5" />
             Esporta
           </Button>
