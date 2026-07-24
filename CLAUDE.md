@@ -49,7 +49,7 @@ Regole operative per Claude Code nel progetto Gestionale Sartoria (`pants-manage
 ```
 Accent:  amber-600/700 · Sidebar: stone-900 · BG: stone-50
 Testo:   slate-800/500 · Border: stone-200 · Hover: amber-50
-Successo: green-50/200/800 · Errore: red-600
+Successo: emerald-50/200/800 · Errore: red-600
 ```
 
 Icone: `lucide-react` · Componenti: `shadcn/ui`
