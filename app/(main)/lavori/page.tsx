@@ -323,6 +323,13 @@ export default function JobsPage() {
       setNotification({ type: "success", message: "Lavoro creato con successo!" });
     } catch (err) {
       console.error(err);
+      const generic = ["", "Errore", "Errore nella creazione"];
+      setNotification({
+        type: "error",
+        message: err instanceof Error && !generic.includes(err.message)
+          ? err.message
+          : "Impossibile creare il lavoro. Riprova.",
+      });
     } finally {
       setIsSubmitting(false);
     }
