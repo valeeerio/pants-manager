@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { inizioGiornoUTC, inizioMeseUTC } from "@/lib/date";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -41,13 +42,10 @@ export async function GET() {
   }
 
   try {
-    const now = new Date();
-    const inizioOggi = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const inizioDomani = new Date(inizioOggi);
-    inizioDomani.setDate(inizioDomani.getDate() + 1);
-    const traSetteGiorni = new Date(inizioOggi);
-    traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
-    const inizioMese = new Date(now.getFullYear(), now.getMonth(), 1);
+    const inizioOggi = inizioGiornoUTC();
+    const inizioDomani = inizioGiornoUTC(1);
+    const traSetteGiorni = inizioGiornoUTC(7);
+    const inizioMese = inizioMeseUTC();
 
     const lavoriAttiviQuery = prisma.project.count({
       where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },

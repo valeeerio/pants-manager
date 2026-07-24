@@ -9,7 +9,7 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 - [x] [alta] Banner errore quando la creazione lavoro fallisce (oggi solo `console.error`) — `app/(main)/lavori/page.tsx` (revisione 2026-07-24 · fatto PR #10, 2026-07-24)
 - [x] [media] Blocco pagamenti duplicati per lo stesso `projectId` (gonfiano `incassatoMese`; il modal legge solo `data[0]`) — `app/api/pagamenti/route.ts` (revisione 2026-07-24 · fatto PR blocco-pagamenti-duplicati, 2026-07-24)
 - [ ] [media] Pulsante "Esporta" senza handler: implementare o rimuovere — `app/(main)/pagamenti/page.tsx` (revisione 2026-07-24)
-- [ ] [bassa] Timezone `dueDate`: salvata UTC, confronti "oggi" in locale → possibili off-by-one — `app/(main)/page.tsx`, `app/api/dashboard/route.ts`, `app/api/notifiche/route.ts` (revisione 2026-07-24)
+- [x] [bassa] Timezone `dueDate`: salvata UTC, confronti "oggi" in locale → possibili off-by-one — `lib/date.ts` (helper Europe/Rome), `app/api/dashboard/route.ts`, `app/api/notifiche/route.ts`; lato client già coerente (revisione 2026-07-24 · fatto 2026-07-24)
 - [ ] [bassa] Paginazione/`take` sulle liste che caricano intere tabelle — `app/api/dashboard/route.ts`, `app/api/lavori/route.ts`, `app/api/pagamenti/route.ts`, `app/api/clienti/route.ts` (revisione 2026-07-24)
 
 ## Schema DB (richiede migrazione Prisma + conferma utente)
