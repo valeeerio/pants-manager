@@ -21,7 +21,7 @@ dall'utente). Non esaminare l'intero repo.
 # Checklist (riporta solo le violazioni effettive, non nitpicking)
 
 1. **Lingua UI**: ogni stringa visibile (label, placeholder, errori, banner, testi bottoni) è in italiano.
-2. **Codici lavoro**: solo `GS-xxx`; segnala qualsiasi `PM-` o logica di generazione codice diversa da quella in `app/api/lavori/route.ts` (incremento su `code` esistente, padStart a 3 cifre).
+2. **Codici lavoro**: solo `GS-xxx`; segnala qualsiasi `PM-` o logica di generazione codice diversa da quella in `app/api/lavori/route.ts` (massimo numerico via `$queryRaw` su `SUBSTRING(code FROM 4)`, retry su `P2002` con 409 finale, padStart a 3 cifre).
 3. **Modal**: usa `createPortal` su `document.body`, ha scroll-lock (`useEffect` su `document.body.style.overflow` con cleanup), si chiude con ESC. Per il dettaglio lavoro va riusato il componente condiviso `components/lavori/lavoro-detail-modal.tsx` (segnala modal di dettaglio lavoro duplicati). Modal sovrapposti devono rispettare la stratificazione z-index esistente: `z-[150]` (kpi-modals) < `z-[200]` (dettaglio lavoro) < `z-[210]` (conferma eliminazione) — segnala nuovi modal con z-index fuori scala (es. `z-50` sopra un modal esistente).
 4. **Filter bar**: logica AND tra i filtri (non OR), contatore risultati sotto la tabella.
 5. **Form validation / notifiche**: niente `alert()`/`confirm()`/toast di libreria nativi — errori di validazione inline sotto il campo, notifiche globali tramite `NotificationBanner` (`components/ui/notification-banner.tsx`).
