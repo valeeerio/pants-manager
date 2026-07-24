@@ -144,6 +144,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Un solo pagamento per lavoro: la UI legge sempre il primo record
+    const pagamentoEsistente = await prisma.payment.findFirst({
+      where: { projectId },
+      select: { id: true },
+    })
+
+    if (pagamentoEsistente) {
+      return NextResponse.json(
+        { error: "Esiste già un pagamento per questo lavoro" },
+        { status: 409 }
+      )
+    }
+
     const paidAtValue =
       status === "PAID"
         ? paidAt
