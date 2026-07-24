@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { inizioGiornoUTC } from "@/lib/date";
 
 const TYPE_MAP: Record<string, string> = {
   HEM: "Orlo pantalone",
@@ -39,16 +40,11 @@ export async function GET() {
   }
 
   try {
-    const now = new Date();
-    const inizioOggi = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const traTreGiorni = new Date(inizioOggi);
-    traTreGiorni.setDate(traTreGiorni.getDate() + 3);
-    const traSetteGiorni = new Date(inizioOggi);
-    traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
-    const traTrentaGiorni = new Date(inizioOggi);
-    traTrentaGiorni.setDate(traTrentaGiorni.getDate() + GIORNI_CALENDARIO);
-    const setteGiorniFa = new Date(inizioOggi);
-    setteGiorniFa.setDate(setteGiorniFa.getDate() - 7);
+    const inizioOggi = inizioGiornoUTC();
+    const traTreGiorni = inizioGiornoUTC(3);
+    const traSetteGiorni = inizioGiornoUTC(7);
+    const traTrentaGiorni = inizioGiornoUTC(GIORNI_CALENDARIO);
+    const setteGiorniFa = inizioGiornoUTC(-7);
 
     const scadenzeQuery = prisma.project.findMany({
       where: {
