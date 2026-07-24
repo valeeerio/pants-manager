@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
@@ -80,34 +81,57 @@ export async function POST(req: Request) {
       );
     }
 
-    const ultimo = await prisma.project.findFirst({
-      orderBy: { code: "desc" },
-      select: { code: true },
-    });
-    const prossimoNumero = ultimo
-      ? parseInt(ultimo.code.replace("GS-", "")) + 1
-      : 1;
-    const code = `GS-${String(prossimoNumero).padStart(3, "0")}`;
     const titoloAuto = TYPE_MAP[type] ?? "Lavoro";
 
-    const lavoro = await prisma.project.create({
-      data: {
-        code,
-        clientId,
-        title: titoloAuto,
-        description: description?.trim() || null,
-        type,
-        status: "TODO",
-        dueDate: new Date(dueDate),
-        price: price ? parseFloat(price) : null,
-        notes: notes?.trim() || null,
-      },
-      include: {
-        client: {
-          select: { firstName: true, lastName: true },
-        },
-      },
-    });
+    const MAX_TENTATIVI = 3;
+    let lavoro = null;
+
+    for (let tentativo = 0; tentativo < MAX_TENTATIVI; tentativo++) {
+      const [{ max }] = await prisma.$queryRaw<[{ max: number | bigint }]>`
+        SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM 4) AS INTEGER)), 0) AS max
+        FROM "Project"
+      `;
+      const prossimoNumero = Number(max) + 1;
+      const code = `GS-${String(prossimoNumero).padStart(3, "0")}`;
+
+      try {
+        lavoro = await prisma.project.create({
+          data: {
+            code,
+            clientId,
+            title: titoloAuto,
+            description: description?.trim() || null,
+            type,
+            status: "TODO",
+            dueDate: new Date(dueDate),
+            price: price ? parseFloat(price) : null,
+            notes: notes?.trim() || null,
+          },
+          include: {
+            client: {
+              select: { firstName: true, lastName: true },
+            },
+          },
+        });
+        break;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          // Codice già preso da una richiesta concorrente: ricalcola e riprova
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!lavoro) {
+      return NextResponse.json(
+        { error: "Conflitto nella generazione del codice lavoro, riprova" },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       {
