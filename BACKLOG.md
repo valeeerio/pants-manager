@@ -36,8 +36,8 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 
 ## Schema DB (richiede migrazione Prisma + conferma utente)
 
-- [ ] [media] Indici mancanti: `Project(status, dueDate, clientId, type)`, `Payment(projectId, status+paidAt)` — `prisma/schema.prisma` (revisione 2026-07-24)
-- [ ] [media] `price Float?` → `Decimal @db.Decimal(10,2)` per evitare arrotondamenti sugli importi — `prisma/schema.prisma` (revisione 2026-07-24)
+- [x] [media] Indici mancanti: `Project(status, dueDate, clientId, type)`, `Payment(projectId, status+paidAt)` — `prisma/schema.prisma` (revisione 2026-07-24 · fatto 2026-07-25, migrazione `add_indexes_and_price_decimal`)
+- [x] [media] `price Float?` → `Decimal @db.Decimal(10,2)` per evitare arrotondamenti sugli importi — `prisma/schema.prisma` (revisione 2026-07-24 · fatto 2026-07-25, migrazione `add_indexes_and_price_decimal`; conversione a `number` centralizzata in `lib/decimal.ts`)
 
 ## Feature
 

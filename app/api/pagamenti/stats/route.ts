@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { inizioMeseUTC } from "@/lib/date"
+import { toNumber } from "@/lib/decimal"
 
 // GET /api/pagamenti/stats
 // Totali per i KPI della pagina Pagamenti, calcolati su tutti i record
@@ -25,7 +26,7 @@ export async function GET() {
 
     const stats = pagamenti.reduce(
       (acc, p) => {
-        const importo = p.project.price ?? 0
+        const importo = toNumber(p.project.price) ?? 0
         if (p.status === "PAID" && p.paidAt && p.paidAt >= inizioMese) {
           acc.incassatoMese += importo
         } else if (p.status === "UNPAID") {

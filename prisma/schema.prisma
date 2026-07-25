@@ -32,12 +32,17 @@ model Project {
   status         ProjectStatus @default(TODO)
   receivedAt     DateTime      @default(now())
   dueDate        DateTime?
-  price          Float?
+  price          Decimal?      @db.Decimal(10, 2)
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   payments       Payment[]
   images         ProjectImage[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([clientId])
+  @@index([type])
 }
 
 model Payment {
@@ -50,6 +55,9 @@ model Payment {
   notes     String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+
+  @@index([projectId])
+  @@index([status, paidAt])
 }
 
 model ProjectImage {

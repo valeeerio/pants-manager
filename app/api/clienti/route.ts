@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { toNumber } from "@/lib/decimal";
 
 // Limite di sicurezza sulla lista clienti
 const LISTA_LIMIT = 200;
@@ -38,7 +39,7 @@ export async function GET() {
       const daIncassare = c.projects.reduce((sum, p) => {
         if (p.status === "CANCELLED") return sum;
         const pagato = p.payments.some((pay) => pay.status === "PAID");
-        return pagato ? sum : sum + (p.price ?? 0);
+        return pagato ? sum : sum + (toNumber(p.price) ?? 0);
       }, 0);
 
       return {

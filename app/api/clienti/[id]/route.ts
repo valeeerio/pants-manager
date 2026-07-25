@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
+import { toNumber } from "@/lib/decimal";
 
 export async function GET(
   _req: Request,
@@ -44,12 +45,12 @@ export async function GET(
 
     const totaleSpeso = cliente.projects.reduce((sum, p) => {
       const pagato = p.payments.some((pay) => pay.status === "PAID");
-      return pagato ? sum + (p.price ?? 0) : sum;
+      return pagato ? sum + (toNumber(p.price) ?? 0) : sum;
     }, 0);
     const daIncassare = cliente.projects.reduce((sum, p) => {
       if (p.status === "CANCELLED") return sum;
       const pagato = p.payments.some((pay) => pay.status === "PAID");
-      return pagato ? sum : sum + (p.price ?? 0);
+      return pagato ? sum : sum + (toNumber(p.price) ?? 0);
     }, 0);
 
     return NextResponse.json({
@@ -73,7 +74,7 @@ export async function GET(
         titolo: p.title,
         stato: p.status,
         dataConsegna: p.dueDate?.toISOString().split("T")[0] ?? null,
-        prezzo: p.price ?? null,
+        prezzo: toNumber(p.price),
       })),
     });
   } catch (error) {

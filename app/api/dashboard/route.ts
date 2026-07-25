@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { inizioGiornoUTC, inizioMeseUTC } from "@/lib/date";
+import { toNumber } from "@/lib/decimal";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -211,12 +212,13 @@ export async function GET() {
 
     const daIncassare = progettiPerIncasso.reduce((sum, p) => {
       const pagato = p.payments.some((pay) => pay.status === "PAID");
-      return pagato ? sum : sum + (p.price ?? 0);
+      return pagato ? sum : sum + (toNumber(p.price) ?? 0);
     }, 0);
 
     const lavoriDaSaldare = progettiPerIncasso.filter(
       (p) =>
-        !p.payments.some((pay) => pay.status === "PAID") && (p.price ?? 0) > 0
+        !p.payments.some((pay) => pay.status === "PAID") &&
+        (toNumber(p.price) ?? 0) > 0
     ).length;
 
     const mapLavoro = (l: (typeof scadutiRaw)[number]) => ({
@@ -227,7 +229,7 @@ export async function GET() {
       status: STATUS_MAP[l.status] ?? l.status,
       statusRaw: l.status,
       dueDate: l.dueDate?.toISOString().split("T")[0] ?? null,
-      price: l.price ?? null,
+      price: toNumber(l.price),
     });
 
     const scaduti = scadutiRaw.map(mapLavoro);
@@ -258,13 +260,13 @@ export async function GET() {
       clientName: `${p.project.client.firstName} ${p.project.client.lastName}`,
       code: p.project.code,
       type: TYPE_MAP[p.project.type] ?? p.project.type,
-      price: p.project.price ?? null,
+      price: toNumber(p.project.price),
       method: p.method,
       paidAt: p.paidAt?.toISOString().split("T")[0] ?? null,
     }));
 
     const incassatoMese = incassatoMeseRaw.reduce(
-      (sum, p) => sum + (p.project.price ?? 0),
+      (sum, p) => sum + (toNumber(p.project.price) ?? 0),
       0
     );
 
@@ -273,7 +275,7 @@ export async function GET() {
       code: l.code,
       clientName: `${l.client.firstName} ${l.client.lastName}`,
       type: TYPE_MAP[l.type] ?? l.type,
-      price: l.price ?? null,
+      price: toNumber(l.price),
       prontoDa: l.updatedAt.toISOString().split("T")[0],
       pagamento: l.payments.some((p) => p.status === "DEPOSIT_PAID")
         ? "DEPOSIT_PAID"

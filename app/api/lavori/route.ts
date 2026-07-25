@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { toNumber } from "@/lib/decimal";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -53,7 +54,7 @@ export async function GET() {
       statusRaw: l.status,
       receivedAt: l.receivedAt.toISOString().split("T")[0],
       dueDate: l.dueDate?.toISOString().split("T")[0] ?? null,
-      price: l.price ?? null,
+      price: toNumber(l.price),
       notes: l.notes ?? null,
       description: l.description ?? null,
     }));
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
         statusRaw: lavoro.status,
         receivedAt: lavoro.receivedAt.toISOString().split("T")[0],
         dueDate: lavoro.dueDate?.toISOString().split("T")[0] ?? null,
-        price: lavoro.price ?? null,
+        price: toNumber(lavoro.price),
         notes: lavoro.notes ?? null,
         description: lavoro.description ?? null,
       },

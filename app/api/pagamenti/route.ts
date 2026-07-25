@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { PaymentStatus, PaymentMethod } from "@prisma/client"
+import { toNumber } from "@/lib/decimal"
 
 function isPaymentStatus(v: string): v is PaymentStatus {
   return (Object.values(PaymentStatus) as string[]).includes(v)
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       projectCode: p.project.code,
       projectTitle: p.project.title,
       clientName: `${p.project.client.firstName} ${p.project.client.lastName}`,
-      amount: p.project.price ?? 0,
+      amount: toNumber(p.project.price) ?? 0,
       status: p.status,
       method: p.method ?? null,
       paidAt: p.paidAt?.toISOString().split("T")[0] ?? null,
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
         projectCode: project.code,
         projectTitle: project.title,
         clientName: `${project.client.firstName} ${project.client.lastName}`,
-        amount: project.price ?? 0,
+        amount: toNumber(project.price) ?? 0,
         status: pagamento.status,
         method: pagamento.method ?? null,
         paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,

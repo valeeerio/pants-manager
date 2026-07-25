@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { Prisma } from "@prisma/client"
+import { toNumber } from "@/lib/decimal"
 
 // GET /api/pagamenti/[id]
 export async function GET(
@@ -48,7 +49,7 @@ export async function GET(
       projectStatus: pagamento.project.status,
       clientName: `${pagamento.project.client.firstName} ${pagamento.project.client.lastName}`,
       clientPhone: pagamento.project.client.phone,
-      amount: pagamento.project.price ?? 0,
+      amount: toNumber(pagamento.project.price) ?? 0,
       status: pagamento.status,
       method: pagamento.method ?? null,
       paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,
@@ -119,7 +120,7 @@ export async function PUT(
       projectCode: pagamento.project.code,
       projectTitle: pagamento.project.title,
       clientName: `${pagamento.project.client.firstName} ${pagamento.project.client.lastName}`,
-      amount: pagamento.project.price ?? 0,
+      amount: toNumber(pagamento.project.price) ?? 0,
       status: pagamento.status,
       method: pagamento.method ?? null,
       paidAt: pagamento.paidAt?.toISOString().split("T")[0] ?? null,
