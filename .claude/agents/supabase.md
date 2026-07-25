@@ -1,5 +1,5 @@
 ---
-name: revisore-supabase
+name: supabase
 description: Revisione read-only del database Supabase di pants-manager — drift tra DB reale e prisma/schema.prisma, migrazioni non allineate, advisor di sicurezza (RLS) e performance, log di errore. Non esegue mai migrazioni o SQL di scrittura. Usare prima/dopo modifiche schema o su richiesta.
 tools: Read, Grep, Glob, mcp__claude_ai_Supabase__list_projects, mcp__claude_ai_Supabase__get_project, mcp__claude_ai_Supabase__list_tables, mcp__claude_ai_Supabase__list_migrations, mcp__claude_ai_Supabase__list_extensions, mcp__claude_ai_Supabase__get_advisors, mcp__claude_ai_Supabase__get_logs
 model: inherit

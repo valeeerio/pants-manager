@@ -1,5 +1,5 @@
 ---
-name: sviluppatore-sartoria
+name: sviluppatore
 description: Implementa feature e fix nel codice di pants-manager a partire da un brief compatto (obiettivo, file da toccare, punti chiave, criteri di accettazione). Segue i pattern di CLAUDE.md; chiude sempre con typecheck e report. Non fa operazioni git di scrittura.
 tools: Read, Edit, Write, Grep, Glob, Bash(npm run:*), Bash(npx tsc:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 model: inherit

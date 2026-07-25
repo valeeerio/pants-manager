@@ -1,5 +1,5 @@
 ---
-name: notion-sync
+name: notion
 description: Braccio operativo della skill /notion — legge lo stato progetto dalla pagina hub Notion o esegue la scrittura del riepilogo di fine sessione, ma SOLO se il prompt riporta la conferma esplicita dell'utente. Da invocare tramite la skill /notion, non direttamente.
 tools: Read, Bash(git status:*), Bash(git diff:*), Bash(git log:*), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-comments, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-comment
 model: inherit

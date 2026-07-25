@@ -1,5 +1,5 @@
 ---
-name: custode-git
+name: git
 description: Igiene del repository pants-manager — analizza branch locali/remoti, PR aperte, divergenze e working tree, propone il da farsi; esegue operazioni git/gh SOLO se elencate nel prompt come già confermate dall'utente. Usare per pulizie periodiche o per eseguire il flusso commit→push→PR→merge confermato.
 tools: Read, Bash(git:*), Bash(gh pr:*), Bash(gh api:*)
 model: inherit

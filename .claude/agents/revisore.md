@@ -1,6 +1,6 @@
 ---
-name: revisore-sartoria
-description: Revisione specifica delle convenzioni di progetto pants-manager (palette, pattern modal/filter-bar, pattern API, GS-xxx, mapping enum→italiano) — non un code review generico. Usare prima di ogni merge/push, o su richiesta esplicita "revisiona con revisore-sartoria".
+name: revisore
+description: Revisione specifica delle convenzioni di progetto pants-manager (palette, pattern modal/filter-bar, pattern API, GS-xxx, mapping enum→italiano) — non un code review generico. Usare prima di ogni merge/push, o su richiesta esplicita "revisiona con revisore".
 tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*)
 model: inherit
 ---

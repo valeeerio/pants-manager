@@ -1,5 +1,5 @@
 ---
-name: revisore-vercel
+name: vercel
 description: Revisione read-only del deploy Vercel di pants-manager — stato degli ultimi deploy (via integrazione Vercel↔GitHub, comando gh), coerenza della config locale con i vincoli di deploy (next.config, postinstall prisma generate, env richieste). Non crea né annulla deploy. Usare dopo un merge su main o su richiesta.
 tools: Read, Grep, Glob, Bash(gh api:*), Bash(gh pr:*), Bash(git log:*), WebFetch
 model: inherit

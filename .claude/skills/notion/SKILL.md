@@ -22,7 +22,7 @@ riferiscilo in chat e suggerisci di aggiornare il config — niente retry ciechi
 ## Modalità LETTURA (`/notion` · `/notion avvia`)
 
 Sola lettura, nessuna modifica a Notion o al codice. Il lavoro lo fa il
-subagent `notion-sync` (`.claude/agents/notion-sync.md`): lancialo in
+subagent `notion` (`.claude/agents/notion.md`): lancialo in
 modalità LETTURA e riporta in chat il suo riassunto (max ~10 righe: cosa era
 in sospeso, ultime decisioni, prossimi passi). Se esiste `BACKLOG.md` nel
 repo, confronta il riassunto con il backlog e segnala eventuali
@@ -36,13 +36,13 @@ il tooling di Claude Code (`.claude/`, hook, skill, workflow): quelle modifiche
 restano solo nel repo. Se nella sessione sono cambiati SOLO file `.claude/` o
 tooling, dillo esplicitamente e fermati: non c'è nulla da scrivere.
 
-1. Lancia il subagent `notion-sync` SENZA conferma nel prompt: ricostruisce
+1. Lancia il subagent `notion` SENZA conferma nel prompt: ricostruisce
    i cambi della sessione da git, filtra (solo `app/`, `components/`, `lib/`,
    `prisma/` e decisioni di prodotto) e restituisce una BOZZA di riepilogo
    senza scrivere nulla. In caso di dubbio su quali commit includere,
    chiedi all'utente.
 2. Mostra la bozza in chat e **chiedi conferma esplicita** all'utente.
-3. Solo dopo conferma: rilancia `notion-sync` in modalità SCRITTURA passando
+3. Solo dopo conferma: rilancia `notion` in modalità SCRITTURA passando
    nel prompt il testo esatto del riepilogo confermato e la dichiarazione che
    l'utente lo ha approvato — l'agente scrive con `notion-update-page`
    (append, mai sovrascrivere) o `notion-create-comment`.
