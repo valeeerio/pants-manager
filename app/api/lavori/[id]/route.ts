@@ -4,25 +4,7 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { toNumber } from "@/lib/decimal";
 import { deleteJobImage, getSignedImageUrl } from "@/lib/supabase-storage";
-
-const STATUS_MAP: Record<string, string> = {
-  TODO: "Da iniziare",
-  IN_PROGRESS: "In lavorazione",
-  WAITING_CUSTOMER: "In attesa cliente",
-  COMPLETED: "Pronto",
-  CANCELLED: "Annullato",
-};
-
-const TYPE_MAP: Record<string, string> = {
-  HEM: "Orlo pantalone",
-  WAIST_TIGHTENING: "Stringere vita",
-  LEG_SHORTENING: "Accorciare gamba",
-  LEG_WIDENING: "Allargare pantalone",
-  ZIP_REPLACEMENT: "Sostituzione zip",
-  REPAIR: "Riparazione",
-  CUSTOM: "Su misura",
-  OTHER: "Altro",
-};
+import { STATUS_MAP, TYPE_MAP } from "@/lib/enum-labels";
 
 export async function GET(
   _req: Request,

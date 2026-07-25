@@ -1,6 +1,6 @@
 # Gestionale Sartoria
 
-App web per la gestione di un laboratorio sartoriale artigianale. Clienti, lavori, pagamenti e consegne in un'unica interfaccia semplice, pensata per chi non è tecnico.
+App web per la gestione di un laboratorio sartoriale artigianale. Clienti, lavori, pagamenti, statistiche e consegne in un'unica interfaccia semplice, pensata per chi non è tecnico.
 
 🌐 **Deploy:** [pants-manager.vercel.app](https://pants-manager.vercel.app)
 
@@ -13,12 +13,14 @@ Cliente → Lavoro → Lavorazione → Prezzo → Pagamento → Consegna
 ## Caratteristiche
 
 - 👤 **Clienti** — anagrafica con ricerca, dettaglio e storico lavori
-- 🧵 **Lavori** — ciclo di vita completo con codici univoci `GS-xxx`, stati di avanzamento e filtri
-- 💰 **Pagamenti** — incassi, acconti e importi da ricevere
-- 📊 **Dashboard** — riepilogo operativo del laboratorio
-- 📦 **Magazzino** — gestione materiali e scorte *(in arrivo)*
-- 📈 **Statistiche** — andamento lavori e incassi *(in arrivo)*
+- 🧵 **Lavori** — ciclo di vita completo con codici univoci `GS-xxx`, stati di avanzamento, filtri e galleria foto Prima/Dopo
+- 💰 **Pagamenti** — incassi, acconti, importi da ricevere, export CSV
+- 📊 **Dashboard** — riepilogo operativo del laboratorio (scaduti, in arrivo, pronti da ritirare, distribuzione tipi)
+- 📈 **Statistiche** — ricavi per giorno, mix lavorazioni e KPI operative su dati reali
+- ⚙️ **Impostazioni** — dati del laboratorio (nome, contatti, valuta, IVA, tempo di consegna standard)
+- 🔔 **Notifiche** — scadenze e consegne in evidenza, con gestione dismissione per utente
 - 🔐 **Autenticazione** — accesso protetto con Auth.js v5
+- 📦 **Magazzino**, 📅 **Prenotazioni**, 🤖 **Assistente Laboratorio** — pianificate, vedi `BACKLOG.md`
 
 ---
 
@@ -30,8 +32,10 @@ Cliente → Lavoro → Lavorazione → Prezzo → Pagamento → Consegna
 | [TypeScript](https://www.typescriptlang.org) | Linguaggio |
 | [Tailwind CSS](https://tailwindcss.com) | Stile |
 | [shadcn/ui](https://ui.shadcn.com) | Componenti UI |
+| [Recharts](https://recharts.org) | Grafici (pagina Statistiche) |
 | [Prisma ORM](https://www.prisma.io) | Accesso al database |
 | [PostgreSQL](https://www.postgresql.org) su [Supabase](https://supabase.com) | Database cloud |
+| [Supabase Storage](https://supabase.com/storage) | Upload foto Prima/Dopo dei lavori |
 | [Auth.js v5](https://authjs.dev) | Autenticazione |
 | [Vercel](https://vercel.com) | Hosting e deploy continuo |
 
@@ -43,8 +47,8 @@ Browser
     ├── app/(main)/     → pagine protette con sidebar
     ├── app/login/      → pagina pubblica
     └── app/api/        → API Routes (backend)
-        └── Prisma ORM
-            └── PostgreSQL su Supabase
+        ├── Prisma ORM → PostgreSQL su Supabase
+        └── Supabase Storage → foto Prima/Dopo
 ```
 
 Il deploy è automatico su Vercel ad ogni push su `main`.
@@ -65,16 +69,18 @@ npm run dev
 
 ### Variabili d'ambiente
 
-Creare un file `.env` nella root con:
+Copiare `.env.example` in `.env` e compilare:
 
 ```env
 DATABASE_URL=
 DIRECT_URL=
 AUTH_SECRET=
 AUTH_URL=
+NEXT_PUBLIC_DATABASE_SUPABASE_URL=
+DATABASE_SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-I valori si trovano nel dashboard Supabase (Database → Connection string) e vanno replicati anche nel dashboard Vercel per il deploy.
+I valori si trovano nel dashboard Supabase (Database → Connection string; Storage → chiave service role) e vanno replicati anche nel dashboard Vercel per il deploy.
 
 ---
 
@@ -95,16 +101,20 @@ npx prisma db seed                        # ri-esegui seed dati
 | Area | Stato |
 |---|---|
 | Pagina Clienti | ✅ Completata — DB reale |
-| Pagina Lavori | ✅ Completata — DB reale |
+| Pagina Lavori | ✅ Completata — DB reale, foto Prima/Dopo su Supabase Storage |
+| Pagina Pagamenti | ✅ Completata — DB reale, export CSV |
+| Dashboard | ✅ Completata — redesign su DB reale |
+| Pagina Statistiche | ✅ Completata — dati reali, grafici Recharts |
+| Pagina Impostazioni | ✅ Completata — DB reale |
 | Autenticazione | ✅ Completata — Auth.js v5 |
-| API Routes Clienti | ✅ CRUD completo |
-| API Routes Lavori | ✅ CRUD completo |
+| Notifiche | ✅ Completata |
+| API Routes | ✅ CRUD completo su Clienti/Lavori/Pagamenti/Statistiche/Impostazioni |
 | Database PostgreSQL | ✅ Attivo su Supabase |
-| Dashboard | 🔄 Da ridisegnare |
-| Pagina Pagamenti | ⏳ In lavorazione |
-| Pagina Statistiche | ⏳ Da fare |
-| Pagina Impostazioni | ⏳ Da fare |
-| Pagina Magazzino | ⏳ Da fare |
+| Pagina Magazzino | ⏳ Pianificata |
+| Pagina/API Prenotazioni | ⏳ Pianificata |
+| Assistente Laboratorio (chatbot) | ⏳ Pianificato |
+
+Roadmap e item aperti dettagliati in `BACKLOG.md` — fonte di verità per lo stato/pianificazione del lavoro.
 
 ---
 

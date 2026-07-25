@@ -8,3 +8,7 @@ dist
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Claude Code — locale, non riproducibile su un'altra macchina/collaboratore
+.claude/settings.local.json
+.claude/worktrees/

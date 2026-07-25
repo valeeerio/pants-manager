@@ -6,7 +6,7 @@ Regole operative per Claude Code nel progetto Gestionale Sartoria (`pants-manage
 
 ## Vincoli tecnici
 
-**Stack:** Next.js 15 (App Router) · TypeScript · Tailwind · shadcn/ui · Prisma · PostgreSQL/Supabase · Auth.js v5 · Vercel
+**Stack:** Next.js 15 (App Router) · TypeScript · Tailwind · shadcn/ui · Prisma · PostgreSQL/Supabase · Auth.js v5 · Vercel · Recharts (grafici)
 
 - API Routes attive in `app/api/` — NO `output: "export"`
 - Route groups: `app/(main)/` (sidebar) · `app/login/` (pubblica)
@@ -16,7 +16,7 @@ Regole operative per Claude Code nel progetto Gestionale Sartoria (`pants-manage
 - `postinstall: prisma generate` in `package.json` — non rimuovere
 - Deploy automatico su Vercel ad ogni push su `main`
 
-**Env:** `DATABASE_URL` · `DIRECT_URL` · `AUTH_SECRET` · `AUTH_URL`
+**Env:** `DATABASE_URL` · `DIRECT_URL` · `AUTH_SECRET` · `AUTH_URL` · `NEXT_PUBLIC_DATABASE_SUPABASE_URL` · `DATABASE_SUPABASE_SERVICE_ROLE_KEY` (Supabase Storage, upload foto)
 
 ---
 
@@ -38,6 +38,7 @@ Regole operative per Claude Code nel progetto Gestionale Sartoria (`pants-manage
 - **Prompt compatti** (no 5 sezioni fisse): obiettivo breve, file da toccare, punti implementativi chiave (no snippet lunghi), 1-3 criteri di accettazione
 - **Autonomia su micro-scelte** implementative (naming, struttura interna file) senza chiedere conferma
 - **Conferma utente richiesta solo per:** operazioni Git (commit/push), deploy, modifiche RLS, modifiche schema DB
+- **Stato/pianificazione lavoro:** `BACKLOG.md` è l'unica fonte di verità (item da audit/revisione, feature pianificate), gestito con la skill `backlog` — nessun tool esterno nel flusso di sviluppo
 
 **Primo comando sempre:** `git checkout <branch> && git status`
 **Report finale (max 3 righe, non narrativo):** esito build · file modificati · criteri soddisfatti
@@ -101,19 +102,9 @@ export async function GET() {
 }
 ```
 
-**Mapping enum → italiano:**
+**Mapping enum → italiano:** centralizzati in `lib/enum-labels.ts` (`STATUS_MAP`, `TYPE_MAP`) — importare da lì, mai ridefinire localmente nelle route:
 ```ts
-const STATUS_MAP: Record<string, string> = {
-  TODO: 'Da iniziare', IN_PROGRESS: 'In lavorazione',
-  WAITING_CUSTOMER: 'In attesa cliente', COMPLETED: 'Pronto',
-  DELIVERED: 'Consegnato', CANCELLED: 'Annullato',
-}
-const TYPE_MAP: Record<string, string> = {
-  HEM: 'Orlo pantalone', WAIST_TIGHTENING: 'Stringere vita',
-  LEG_SHORTENING: 'Accorciare gamba', LEG_WIDENING: 'Allargare pantalone',
-  ZIP_REPLACEMENT: 'Sostituzione zip', REPAIR: 'Riparazione',
-  CUSTOM: 'Su misura', OTHER: 'Altro',
-}
+import { STATUS_MAP, TYPE_MAP } from '@/lib/enum-labels'
 ```
 
 ---

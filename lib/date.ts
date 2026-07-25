@@ -20,3 +20,7 @@ export function inizioMeseUTC(): Date {
   const [y, m] = dataCalendarioOggi();
   return new Date(Date.UTC(y, m - 1, 1));
 }
+
+export function ultimiGiorniUTC(n: number): Date[] {
+  return Array.from({ length: n }, (_, i) => inizioGiornoUTC(-(n - 1) + i));
+}

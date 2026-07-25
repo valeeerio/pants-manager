@@ -67,6 +67,8 @@ model ProjectImage {
   path      String
   type      ImageType
   createdAt DateTime    @default(now())
+
+  @@index([projectId])
 }
 
 model User {
@@ -88,6 +90,18 @@ model NotificaDismissa {
   createdAt  DateTime @default(now())
 
   @@unique([userId, notificaId])
+}
+
+model LabSettings {
+  id             String   @id @default(cuid())
+  shopName       String
+  phone          String?
+  address        String?
+  currency       String   @default("EUR")
+  defaultVatRate Decimal  @db.Decimal(5, 2) @default(22)
+  leadTimeDays   Int      @default(5)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 enum ProjectStatus {
