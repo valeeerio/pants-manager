@@ -14,11 +14,11 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 
 ## Bug da revisione components/lib/login (2026-07-24)
 
-- [ ] [alta] Fetch pagamento nel modal senza controllo `res.ok`: se l'API fallisce, il lavoro viene mostrato come "non pagato" invece di segnalare l'errore — `components/lavori/lavoro-detail-modal.tsx:129-135` (revisione 2026-07-24)
-- [ ] [alta] Errore di salvataggio modifica lavoro solo in `console.error`, nessun messaggio inline all'utente — `components/lavori/lavoro-detail-modal.tsx:334-338` (revisione 2026-07-24)
-- [ ] [alta] Errore di eliminazione lavoro solo in `console.error`, nessun feedback visibile — `components/lavori/lavoro-detail-modal.tsx:234-236` (revisione 2026-07-24)
-- [ ] [alta] Login: `signIn()` non in try/catch — se lancia eccezione (errore rete/config) lo spinner resta bloccato indefinitamente — `app/login/page.tsx:19-31` (revisione 2026-07-24)
-- [ ] [alta] Login: manca il tag `<form>` (input in `<div>`) — premendo Invio dopo la password il login non parte — `app/login/page.tsx:34-91` (revisione 2026-07-24)
+- [x] [alta] Fetch pagamento nel modal senza controllo `res.ok`: se l'API fallisce, il lavoro viene mostrato come "non pagato" invece di segnalare l'errore — `components/lavori/lavoro-detail-modal.tsx:129-135` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [alta] Errore di salvataggio modifica lavoro solo in `console.error`, nessun messaggio inline all'utente — `components/lavori/lavoro-detail-modal.tsx:334-338` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [alta] Errore di eliminazione lavoro solo in `console.error`, nessun feedback visibile — `components/lavori/lavoro-detail-modal.tsx:234-236` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [alta] Login: `signIn()` non in try/catch — se lancia eccezione (errore rete/config) lo spinner resta bloccato indefinitamente — `app/login/page.tsx:19-31` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [alta] Login: manca il tag `<form>` (input in `<div>`) — premendo Invio dopo la password il login non parte — `app/login/page.tsx:34-91` (revisione 2026-07-24 · fatto 2026-07-25)
 - [ ] [media] `dismissNotifiche` rimuove la notifica dalla UI prima della fetch senza controllare `res.ok` né fare rollback in errore — stato client/server disallineato — `components/layout/topbar.tsx:70-81` (revisione 2026-07-24)
 - [ ] [media] Badge "Pagato" usa `green-*` invece di `emerald-*` di palette — `components/lavori/lavoro-detail-modal.tsx:464-470` (revisione 2026-07-24)
 - [ ] [bassa] Banner "Salvato" pagamento sparisce dopo 2s invece dei 3s da convenzione — `components/lavori/lavoro-detail-modal.tsx:148-152` (revisione 2026-07-24)

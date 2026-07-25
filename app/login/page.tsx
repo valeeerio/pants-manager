@@ -16,18 +16,23 @@ export default function LoginPage() {
     setLoading(true)
     setError("")
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
 
-    if (result?.error) {
-      setError("Email o password non corretti")
+      if (result?.error) {
+        setError("Email o password non corretti")
+        setLoading(false)
+      } else {
+        router.push("/")
+        router.refresh()
+      }
+    } catch {
+      setError("Errore di connessione. Riprova più tardi.")
       setLoading(false)
-    } else {
-      router.push("/")
-      router.refresh()
     }
   }
 
@@ -46,7 +51,7 @@ export default function LoginPage() {
         <div className="border-t border-stone-100 mb-6" />
 
         {/* Form */}
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Email
@@ -79,13 +84,13 @@ export default function LoginPage() {
           )}
 
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading}
             className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
           >
             {loading ? "Accesso in corso…" : "Accedi"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )

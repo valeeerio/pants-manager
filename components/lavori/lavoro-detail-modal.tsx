@@ -33,6 +33,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   const [clientiDisponibili, setClientiDisponibili] = useState<Cliente[]>([]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [quickStatusValue, setQuickStatusValue] = useState("");
   const [showStatusChange, setShowStatusChange] = useState(false);
   const [isStatusChanging, setIsStatusChanging] = useState(false);
@@ -51,6 +52,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   const [editNote, setEditNote] = useState("");
   const [editErrors, setEditErrors] = useState({ cliente: "", tipoLavoro: "", dataConsegna: "" });
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [editSubmitError, setEditSubmitError] = useState("");
 
   const [existingPayment, setExistingPayment] = useState<PaymentData | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
@@ -127,11 +129,14 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     setPaymentSavedMsg(false);
     setIsPaymentLoading(true);
     fetch(`/api/pagamenti?projectId=${job.id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Impossibile verificare lo stato del pagamento.");
+        return r.json();
+      })
       .then((data: PaymentData[]) => {
         setExistingPayment(data.length > 0 ? data[0] : null);
       })
-      .catch(() => setPaymentError("Impossibile caricare il pagamento."))
+      .catch(() => setPaymentError("Impossibile verificare lo stato del pagamento. Riprova più tardi."))
       .finally(() => setIsPaymentLoading(false));
   }, [job?.id, isModalOpen]);
 
@@ -221,6 +226,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
 
   async function deleteLavoro() {
     if (!job) return;
+    setDeleteError("");
     try {
       const res = await fetch(`/api/lavori/${job.id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -232,7 +238,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
       onDeleted?.(deletedId);
       onClose();
     } catch (error) {
-      console.error(error);
+      setDeleteError(error instanceof Error ? error.message : "Errore nell'eliminazione del lavoro.");
     }
   }
 
@@ -279,6 +285,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     setEditPrezzoStimato(lavoro.price?.toString() || "");
     setEditNote(lavoro.notes || "");
     setEditErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
+    setEditSubmitError("");
     setIsEditModalOpen(true);
   }
 
@@ -290,6 +297,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     setEditPrezzoStimato("");
     setEditNote("");
     setEditErrors({ cliente: "", tipoLavoro: "", dataConsegna: "" });
+    setEditSubmitError("");
     setIsEditSubmitting(false);
   }
 
@@ -306,6 +314,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   async function handleEditSubmit() {
     if (!job || !validateEditForm()) return;
     setIsEditSubmitting(true);
+    setEditSubmitError("");
     try {
       const res = await fetch(`/api/lavori/${job.id}`, {
         method: "PUT",
@@ -332,7 +341,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
       setIsEditModalOpen(false);
       resetEditForm();
     } catch (err) {
-      console.error(err);
+      setEditSubmitError(err instanceof Error ? err.message : "Errore nel salvataggio delle modifiche.");
     } finally {
       setIsEditSubmitting(false);
     }
@@ -568,7 +577,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
               <Button
                 className="border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
                 variant="ghost"
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={() => { setShowDeleteConfirm(true); setDeleteError(""); }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Elimina
@@ -613,8 +622,9 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
             <p className="mb-5 text-[13px] text-slate-500">
               Stai per eliminare il lavoro {job.code}. Questa azione non può essere annullata.
             </p>
+            {deleteError && <p className="mb-4 text-sm text-red-600">{deleteError}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              <Button variant="outline" onClick={() => { setShowDeleteConfirm(false); setDeleteError(""); }}>
                 Annulla
               </Button>
               <Button className="bg-red-600 text-white hover:bg-red-700" onClick={deleteLavoro}>
@@ -746,23 +756,26 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
             </div>
 
             {/* Footer */}
-            <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 px-6 py-4">
-              <button
-                type="button"
-                disabled={isEditSubmitting}
-                onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                disabled={isEditSubmitting}
-                onClick={handleEditSubmit}
-                className="rounded-lg bg-amber-700 px-4 py-2 text-[13px] font-medium text-white shadow-sm shadow-amber-900/20 transition-all hover:bg-amber-800 active:scale-[0.98] disabled:opacity-50"
-              >
-                {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
-              </button>
+            <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 px-6 py-4">
+              {editSubmitError && <p className="text-sm text-red-600">{editSubmitError}</p>}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isEditSubmitting}
+                  onClick={() => { setIsEditModalOpen(false); resetEditForm(); }}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="button"
+                  disabled={isEditSubmitting}
+                  onClick={handleEditSubmit}
+                  className="rounded-lg bg-amber-700 px-4 py-2 text-[13px] font-medium text-white shadow-sm shadow-amber-900/20 transition-all hover:bg-amber-800 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isEditSubmitting ? "Salvataggio..." : "Salva modifiche"}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
