@@ -31,7 +31,7 @@ export function Sidebar() {
   const { data: session } = useSession();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-[#111214] lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-stone-900 lg:flex">
       {/* Top shimmer line */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-700/25 to-transparent" />
 

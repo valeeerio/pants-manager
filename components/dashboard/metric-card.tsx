@@ -9,9 +9,22 @@ type MetricCardProps = {
   onClick?: () => void;
 };
 
+/**
+ * Deduce la direzione del trend dal testo di `change`.
+ * `change` è una stringa descrittiva libera (es. "+3 lavori", "invariato"),
+ * non un dato strutturato: questa funzione isola l'unico punto in cui se ne
+ * fa il parsing.
+ */
+function parseTrend(change: string): "positive" | "negative" | "neutral" {
+  if (change.startsWith("+")) return "positive";
+  if (change.startsWith("-") && !change.includes("invariato")) return "negative";
+  return "neutral";
+}
+
 export function MetricCard({ label, value, change, icon: Icon, onClick }: MetricCardProps) {
-  const isPositive = change.startsWith("+");
-  const isNegative = change.startsWith("-") && !change.includes("invariato");
+  const trend = parseTrend(change);
+  const isPositive = trend === "positive";
+  const isNegative = trend === "negative";
 
   const card = (
     <Card className="relative overflow-hidden">
@@ -47,7 +60,18 @@ export function MetricCard({ label, value, change, icon: Icon, onClick }: Metric
   );
 
   return onClick ? (
-    <div onClick={onClick} className="block">
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="block cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-1"
+    >
       {card}
     </div>
   ) : (

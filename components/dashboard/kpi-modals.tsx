@@ -106,7 +106,15 @@ function RigaLavoro({
   return (
     <div
       onClick={onClick}
-      className={`flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-slate-100/80 px-3 py-2.5 transition-all duration-150 hover:border-slate-200 hover:bg-white hover:shadow-sm ${
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-slate-100/80 px-3 py-2.5 outline-none transition-all duration-150 hover:border-slate-200 hover:bg-white hover:shadow-sm focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-1 ${
         attenuata ? "bg-slate-50/30 opacity-75" : "bg-slate-50/50"
       }`}
     >

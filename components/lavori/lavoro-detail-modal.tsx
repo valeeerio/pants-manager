@@ -152,7 +152,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
 
   useEffect(() => {
     if (!paymentSavedMsg) return;
-    const t = setTimeout(() => setPaymentSavedMsg(false), 2000);
+    const t = setTimeout(() => setPaymentSavedMsg(false), 3000);
     return () => clearTimeout(t);
   }, [paymentSavedMsg]);
 
@@ -472,7 +472,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                     <div className="mb-4 flex items-center gap-2">
                       <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${
                         existingPayment.status === "PAID"
-                          ? "bg-green-50 text-green-800 border-green-200"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                           : existingPayment.status === "DEPOSIT_PAID"
                           ? "bg-amber-50 text-amber-700 border-amber-200"
                           : "bg-stone-50 text-stone-600 border-stone-200"

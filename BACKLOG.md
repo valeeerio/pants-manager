@@ -19,20 +19,20 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 - [x] [alta] Errore di eliminazione lavoro solo in `console.error`, nessun feedback visibile — `components/lavori/lavoro-detail-modal.tsx:234-236` (revisione 2026-07-24 · fatto 2026-07-25)
 - [x] [alta] Login: `signIn()` non in try/catch — se lancia eccezione (errore rete/config) lo spinner resta bloccato indefinitamente — `app/login/page.tsx:19-31` (revisione 2026-07-24 · fatto 2026-07-25)
 - [x] [alta] Login: manca il tag `<form>` (input in `<div>`) — premendo Invio dopo la password il login non parte — `app/login/page.tsx:34-91` (revisione 2026-07-24 · fatto 2026-07-25)
-- [ ] [media] `dismissNotifiche` rimuove la notifica dalla UI prima della fetch senza controllare `res.ok` né fare rollback in errore — stato client/server disallineato — `components/layout/topbar.tsx:70-81` (revisione 2026-07-24)
-- [ ] [media] Badge "Pagato" usa `green-*` invece di `emerald-*` di palette — `components/lavori/lavoro-detail-modal.tsx:464-470` (revisione 2026-07-24)
-- [ ] [bassa] Banner "Salvato" pagamento sparisce dopo 2s invece dei 3s da convenzione — `components/lavori/lavoro-detail-modal.tsx:148-152` (revisione 2026-07-24)
-- [ ] [bassa] `NotificationBanner` si auto-chiude a 4s invece dei 3s da convenzione — `components/ui/notification-banner.tsx:39-42` (revisione 2026-07-24)
-- [ ] [bassa] Sfondo sidebar `bg-[#111214]` arbitrario invece di `bg-stone-900` — `components/layout/sidebar.tsx:34` (revisione 2026-07-24)
+- [x] [media] `dismissNotifiche` rimuove la notifica dalla UI prima della fetch senza controllare `res.ok` né fare rollback in errore — stato client/server disallineato — `components/layout/topbar.tsx:70-81` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [media] Badge "Pagato" usa `green-*` invece di `emerald-*` di palette — `components/lavori/lavoro-detail-modal.tsx:464-470` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [bassa] Banner "Salvato" pagamento sparisce dopo 2s invece dei 3s da convenzione — `components/lavori/lavoro-detail-modal.tsx:148-152` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [bassa] `NotificationBanner` si auto-chiude a 4s invece dei 3s da convenzione — `components/ui/notification-banner.tsx:39-42` (revisione 2026-07-24 · fatto 2026-07-25)
+- [x] [bassa] Sfondo sidebar `bg-[#111214]` arbitrario invece di `bg-stone-900` — `components/layout/sidebar.tsx:34` (revisione 2026-07-24 · fatto 2026-07-25)
 
 ## Migliorie da revisione components/lib/login (2026-07-24)
 
-- [ ] [media] Doppio sistema di colori per stato lavoro (`STATUS_COLORS` in `lavoro-shared.tsx` vs `status-badge.tsx`) — rischio di drift se si aggiunge uno stato — `components/lavori/lavoro-shared.tsx`, `components/shared/status-badge.tsx`
-- [ ] [bassa] Righe lavoro cliccabili senza `role`/`tabIndex`/tastiera nei modal KPI dashboard — `components/dashboard/kpi-modals.tsx:107-128`
-- [ ] [bassa] Card dashboard con `onClick`: div senza `cursor-pointer` né semantica bottone/tastiera — `components/dashboard/metric-card.tsx:49-53`
-- [ ] [bassa] `caricaNotifiche` senza cleanup/AbortController (setState su componente potenzialmente smontato); errori fetch solo in console — `components/layout/topbar.tsx:25-41`
-- [ ] [bassa] Login: nessuna validazione client-side (campi vuoti inviati comunque); input senza `id`/`htmlFor`/`autoComplete` — `app/login/page.tsx`
-- [ ] [bassa] Trend positivo/negativo dedotto da `startsWith`/`includes` su stringa, accoppiamento implicito fragile — `components/dashboard/metric-card.tsx:13-14`
+- [x] [media] Doppio sistema di colori per stato lavoro (`STATUS_COLORS` in `lavoro-shared.tsx` vs `status-badge.tsx`) — rischio di drift se si aggiunge uno stato — `components/lavori/lavoro-shared.tsx`, `components/shared/status-badge.tsx` (fatto 2026-07-25)
+- [x] [bassa] Righe lavoro cliccabili senza `role`/`tabIndex`/tastiera nei modal KPI dashboard — `components/dashboard/kpi-modals.tsx:107-128` (fatto 2026-07-25)
+- [x] [bassa] Card dashboard con `onClick`: div senza `cursor-pointer` né semantica bottone/tastiera — `components/dashboard/metric-card.tsx:49-53` (fatto 2026-07-25)
+- [x] [bassa] `caricaNotifiche` senza cleanup/AbortController (setState su componente potenzialmente smontato); errori fetch solo in console — `components/layout/topbar.tsx:25-41` (fatto 2026-07-25)
+- [x] [bassa] Login: nessuna validazione client-side (campi vuoti inviati comunque); input senza `id`/`htmlFor`/`autoComplete` — `app/login/page.tsx` (fatto 2026-07-25)
+- [x] [bassa] Trend positivo/negativo dedotto da `startsWith`/`includes` su stringa, accoppiamento implicito fragile — `components/dashboard/metric-card.tsx:13-14` (fatto 2026-07-25)
 
 ## Schema DB (richiede migrazione Prisma + conferma utente)
 

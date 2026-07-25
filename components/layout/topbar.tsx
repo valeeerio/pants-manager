@@ -12,6 +12,7 @@ import {
   type CalendarioGiorno,
 } from "@/components/layout/notifiche-dropdown";
 import { LavoroDetailModal } from "@/components/lavori/lavoro-detail-modal";
+import { NotificationBanner } from "@/components/ui/notification-banner";
 
 export function Topbar() {
   const [notifiche, setNotifiche] = useState<Notifica[]>([]);
@@ -19,25 +20,31 @@ export function Topbar() {
   const [loading, setLoading] = useState(true);
   const [pannelloAperto, setPannelloAperto] = useState<"campanella" | "calendario" | null>(null);
   const [lavoroApertoId, setLavoroApertoId] = useState<string | null>(null);
+  const [erroreDismiss, setErroreDismiss] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function caricaNotifiche() {
       try {
         setLoading(true);
-        const res = await fetch("/api/notifiche");
+        const res = await fetch("/api/notifiche", { signal: controller.signal });
         if (!res.ok) throw new Error("Errore nel caricamento delle notifiche");
         const json = await res.json();
         setNotifiche(json.notifiche ?? []);
         setCalendario(json.calendario ?? []);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     caricaNotifiche();
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -68,15 +75,23 @@ export function Topbar() {
   }
 
   async function dismissNotifiche(ids: string[]) {
+    const notificheRimosse = notifiche.filter((n) => ids.includes(n.id));
     setNotifiche((prev) => prev.filter((n) => !ids.includes(n.id)));
     try {
-      await fetch("/api/notifiche/dismiss", {
+      const res = await fetch("/api/notifiche/dismiss", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificaIds: ids }),
       });
+      if (!res.ok) throw new Error("Errore nella rimozione delle notifiche");
     } catch (err) {
       console.error(err);
+      setNotifiche((prev) => {
+        const idsPresenti = new Set(prev.map((n) => n.id));
+        const daRipristinare = notificheRimosse.filter((n) => !idsPresenti.has(n.id));
+        return [...prev, ...daRipristinare];
+      });
+      setErroreDismiss("Impossibile rimuovere la notifica. Riprova.");
     }
   }
 
@@ -153,9 +168,18 @@ export function Topbar() {
                 />
               </div>
             )}
+
           </div>
         </div>
       </div>
+
+      {erroreDismiss && (
+        <NotificationBanner
+          type="error"
+          message={erroreDismiss}
+          onDismiss={() => setErroreDismiss(null)}
+        />
+      )}
 
       <LavoroDetailModal projectId={lavoroApertoId} onClose={() => setLavoroApertoId(null)} />
     </header>

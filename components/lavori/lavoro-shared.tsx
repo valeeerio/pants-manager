@@ -38,13 +38,24 @@ export const FIELD_ERROR_CLASS =
 export const TEXTAREA_CLASS =
   "w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 
-export const STATUS_COLORS: Record<string, string> = {
-  "Da iniziare": "bg-stone-100 text-stone-600 border-transparent",
-  "In lavorazione": "bg-amber-100 text-amber-700 border-transparent",
-  "In attesa cliente": "bg-orange-100 text-orange-700 border-transparent",
-  Pronto: "bg-emerald-100 text-emerald-700 border-transparent",
-  Annullato: "bg-red-100 text-red-700 border-transparent",
+export type StatusBadgeVariant = "success" | "info" | "warning" | "muted" | "destructive" | "teal";
+
+/**
+ * Fonte di verità unica per lo stato lavoro: da qui derivano sia i colori
+ * inline usati in questo file sia la variant del componente `<StatusBadge>`.
+ * Aggiungere un nuovo stato richiede una sola modifica qui.
+ */
+export const STATUS_META: Record<string, { color: string; variant: StatusBadgeVariant }> = {
+  "Da iniziare": { color: "bg-stone-100 text-stone-600 border-transparent", variant: "muted" },
+  "In lavorazione": { color: "bg-amber-100 text-amber-700 border-transparent", variant: "info" },
+  "In attesa cliente": { color: "bg-orange-100 text-orange-700 border-transparent", variant: "warning" },
+  Pronto: { color: "bg-emerald-100 text-emerald-700 border-transparent", variant: "success" },
+  Annullato: { color: "bg-red-100 text-red-700 border-transparent", variant: "destructive" },
 };
+
+export const STATUS_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(STATUS_META).map(([status, meta]) => [status, meta.color])
+);
 
 export const REVERSE_STATUS_MAP: Record<string, string> = {
   "Da iniziare": "TODO",

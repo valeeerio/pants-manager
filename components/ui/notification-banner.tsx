@@ -37,7 +37,7 @@ export function NotificationBanner({ type, message, onDismiss }: NotificationBan
   const { wrapper, badge, text, Icon } = CONFIG[type];
 
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 4000);
+    const timer = setTimeout(onDismiss, 3000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
