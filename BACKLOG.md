@@ -42,7 +42,7 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 ## Feature
 
 - [ ] [alta] Rework pagina Statistiche: da dati mock (`lib/mock-data.ts`) a dati reali via API — impostare con `/pianifica` — `app/(main)/statistiche/page.tsx` (audit 2026-07-24)
-- [ ] [media] Persistenza foto Prima/Dopo: modello `ProjectImage` esiste ma nessuna route lo usa, le foto si perdono alla chiusura del modal — `components/lavori/lavoro-detail-modal.tsx` (revisione 2026-07-24)
+- [x] [media] Persistenza foto Prima/Dopo: modello `ProjectImage` esiste ma nessuna route lo usa, le foto si perdono alla chiusura del modal — `components/lavori/lavoro-detail-modal.tsx` (revisione 2026-07-24 · fatto 2026-07-25, upload su Supabase Storage bucket privato `project-images`, signed URL, migrazione `rename_project_image_path`)
 
 ## Revisioni da completare
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { toNumber } from "@/lib/decimal";
+import { deleteJobImage, getSignedImageUrl } from "@/lib/supabase-storage";
 
 const STATUS_MAP: Record<string, string> = {
   TODO: "Da iniziare",
@@ -40,6 +41,9 @@ export async function GET(
         client: {
           select: { firstName: true, lastName: true, phone: true },
         },
+        images: {
+          select: { id: true, path: true, type: true },
+        },
       },
     });
 
@@ -49,6 +53,14 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const imgPrima = lavoro.images.find((img) => img.type === "BEFORE") ?? null;
+    const imgDopo = lavoro.images.find((img) => img.type === "AFTER") ?? null;
+
+    const [urlPrima, urlDopo] = await Promise.all([
+      imgPrima ? getSignedImageUrl(imgPrima.path) : Promise.resolve(null),
+      imgDopo ? getSignedImageUrl(imgDopo.path) : Promise.resolve(null),
+    ]);
 
     return NextResponse.json({
       id: lavoro.id,
@@ -64,6 +76,10 @@ export async function GET(
       price: toNumber(lavoro.price),
       notes: lavoro.notes ?? null,
       description: lavoro.description ?? null,
+      photos: {
+        prima: imgPrima && urlPrima ? { id: imgPrima.id, url: urlPrima } : null,
+        dopo: imgDopo && urlDopo ? { id: imgDopo.id, url: urlDopo } : null,
+      },
     });
   } catch (error) {
     console.error("Errore GET /api/lavori/[id]:", error);
@@ -184,6 +200,13 @@ export async function DELETE(
     const { id } = await params;
 
     await prisma.payment.deleteMany({ where: { projectId: id } });
+
+    const immagini = await prisma.projectImage.findMany({
+      where: { projectId: id },
+      select: { path: true },
+    });
+    await Promise.all(immagini.map((img) => deleteJobImage(img.path)));
+
     await prisma.projectImage.deleteMany({ where: { projectId: id } });
     await prisma.project.delete({ where: { id } });
 

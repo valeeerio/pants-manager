@@ -64,7 +64,7 @@ model ProjectImage {
   id        String      @id @default(cuid())
   projectId String
   project   Project     @relation(fields: [projectId], references: [id])
-  data      String
+  path      String
   type      ImageType
   createdAt DateTime    @default(now())
 }

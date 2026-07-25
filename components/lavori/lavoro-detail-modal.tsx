@@ -40,6 +40,8 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   const [statusChangeError, setStatusChangeError] = useState("");
 
   const [jobPhotos, setJobPhotos] = useState<Record<string, JobPhotos>>({});
+  const [uploadingSlot, setUploadingSlot] = useState<"prima" | "dopo" | null>(null);
+  const [photoError, setPhotoError] = useState("");
   const inputPrimaRef = useRef<HTMLInputElement>(null);
   const inputDopoRef = useRef<HTMLInputElement>(null);
 
@@ -84,10 +86,18 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
         if (lavoro) {
           setJob(lavoro);
           setQuickStatusValue(lavoro.status);
+          setJobPhotos((prev) => ({
+            ...prev,
+            [lavoro.id]: {
+              prima: lavoro.photos?.prima ?? null,
+              dopo: lavoro.photos?.dopo ?? null,
+            },
+          }));
         }
         setClientiDisponibili(clienti ?? []);
         setShowStatusChange(false);
         setShowDeleteConfirm(false);
+        setPhotoError("");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -242,23 +252,55 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     }
   }
 
-  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>, jobId: string, slot: "prima" | "dopo") {
+  const MAX_PHOTO_SIZE = 8 * 1024 * 1024; // 8MB
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>, jobId: string, slot: "prima" | "dopo") {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+
+    setPhotoError("");
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Il file deve essere un'immagine di massimo 8MB");
+      return;
+    }
+    if (file.size > MAX_PHOTO_SIZE) {
+      setPhotoError("Il file deve essere un'immagine di massimo 8MB");
+      return;
+    }
+
+    setUploadingSlot(slot);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", slot === "prima" ? "BEFORE" : "AFTER");
+
+      const res = await fetch(`/api/lavori/${jobId}/images`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nel caricamento della foto");
+      }
+
+      const uploaded: { id: string; url: string } = await res.json();
+
       setJobPhotos((prev) => ({
         ...prev,
         [jobId]: {
           prima: prev[jobId]?.prima ?? null,
           dopo: prev[jobId]?.dopo ?? null,
-          [slot]: base64,
+          [slot]: { id: uploaded.id, url: uploaded.url },
         },
       }));
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "Errore nel caricamento della foto.");
+    } finally {
+      setUploadingSlot(null);
+    }
   }
 
   function handleOpenFilePicker(slot: "prima" | "dopo") {
@@ -266,15 +308,32 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     else inputDopoRef.current?.click();
   }
 
-  function handleRemovePhoto(jobId: string, slot: "prima" | "dopo") {
-    setJobPhotos((prev) => ({
-      ...prev,
-      [jobId]: {
-        prima: prev[jobId]?.prima ?? null,
-        dopo: prev[jobId]?.dopo ?? null,
-        [slot]: null,
-      },
-    }));
+  async function handleRemovePhoto(jobId: string, slot: "prima" | "dopo") {
+    const photo = jobPhotos[jobId]?.[slot];
+    if (!photo) return;
+
+    setPhotoError("");
+    try {
+      const res = await fetch(`/api/lavori/${jobId}/images/${photo.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'eliminazione della foto");
+      }
+
+      setJobPhotos((prev) => ({
+        ...prev,
+        [jobId]: {
+          prima: prev[jobId]?.prima ?? null,
+          dopo: prev[jobId]?.dopo ?? null,
+          [slot]: null,
+        },
+      }));
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "Errore nell'eliminazione della foto.");
+    }
   }
 
   function openEditModal(lavoro: Job) {
@@ -419,14 +478,22 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
               <div className="grid grid-cols-2 gap-4">
                 {(["prima", "dopo"] as const).map((slot) => {
                   const currentPhotos = jobPhotos[job.id];
-                  const fotoUrl = slot === "prima" ? (currentPhotos?.prima ?? null) : (currentPhotos?.dopo ?? null);
+                  const foto = slot === "prima" ? (currentPhotos?.prima ?? null) : (currentPhotos?.dopo ?? null);
                   const labelTitolo = slot === "prima" ? "Prima" : "Dopo";
                   const labelSub = slot === "prima" ? "Stato all'arrivo" : "Risultato finale";
+                  const isUploading = uploadingSlot === slot;
                   return (
                     <div key={slot} className="flex flex-col items-center">
                       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{labelTitolo}</p>
                       <p className="mb-3 text-xs text-slate-400">{labelSub}</p>
-                      {fotoUrl === null ? (
+                      {isUploading ? (
+                        <div
+                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50"
+                          style={{ aspectRatio: "4/3" }}
+                        >
+                          <span className="text-sm font-medium text-amber-600">Caricamento...</span>
+                        </div>
+                      ) : foto === null ? (
                         <div
                           className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 transition-colors hover:border-stone-400 hover:bg-stone-100"
                           style={{ aspectRatio: "4/3" }}
@@ -442,7 +509,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                           style={{ aspectRatio: "4/3" }}
                           onClick={() => handleOpenFilePicker(slot)}
                         >
-                          <img src={fotoUrl} alt={labelTitolo} className="h-full w-full object-cover" />
+                          <img src={foto.url} alt={labelTitolo} className="h-full w-full object-cover" />
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                             <Pencil size={20} className="text-white" />
                             <span className="text-xs font-medium text-white">Cambia foto</span>
@@ -459,6 +526,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                   );
                 })}
               </div>
+              {photoError && <p className="mt-3 text-sm text-red-600">{photoError}</p>}
             </div>
 
             {/* Sezione pagamento */}

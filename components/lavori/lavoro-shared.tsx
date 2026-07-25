@@ -1,6 +1,8 @@
+export type JobPhoto = { id: string; url: string };
+
 export type JobPhotos = {
-  prima: string | null;
-  dopo: string | null;
+  prima: JobPhoto | null;
+  dopo: JobPhoto | null;
 };
 
 export type Cliente = { id: string; nome: string; cognome: string };
