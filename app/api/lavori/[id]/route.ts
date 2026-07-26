@@ -181,16 +181,26 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    await prisma.payment.deleteMany({ where: { projectId: id } });
-
     const immagini = await prisma.projectImage.findMany({
       where: { projectId: id },
       select: { path: true },
     });
     await Promise.all(immagini.map((img) => deleteJobImage(img.path)));
 
-    await prisma.projectImage.deleteMany({ where: { projectId: id } });
-    await prisma.project.delete({ where: { id } });
+    const materialUsages = await prisma.projectMaterial.findMany({ where: { projectId: id } });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({ where: { projectId: id } });
+      await tx.projectImage.deleteMany({ where: { projectId: id } });
+      for (const usage of materialUsages) {
+        await tx.material.update({
+          where: { id: usage.materialId },
+          data: { quantity: { increment: usage.quantity } },
+        });
+      }
+      await tx.projectMaterial.deleteMany({ where: { projectId: id } });
+      await tx.project.delete({ where: { id } });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

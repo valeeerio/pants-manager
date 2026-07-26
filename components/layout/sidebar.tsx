@@ -10,6 +10,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LogOut,
+  Package,
   Scissors,
   Settings,
   User,
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Clienti", href: "/clienti", icon: Users },
   { name: "Lavori", href: "/lavori", icon: BriefcaseBusiness },
+  { name: "Magazzino", href: "/magazzino", icon: Package },
   { name: "Pagamenti", href: "/pagamenti", icon: CreditCard },
   { name: "Statistiche", href: "/statistiche", icon: BarChart3 },
   { name: "Impostazioni", href: "/impostazioni", icon: Settings }

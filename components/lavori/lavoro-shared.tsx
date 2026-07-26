@@ -33,6 +33,23 @@ export type PaymentData = {
   createdAt: string;
 };
 
+export type MaterialUsage = {
+  id: string;
+  materialId: string;
+  nomeMateriale: string;
+  categoria: string;
+  unita: string;
+  quantita: number;
+};
+
+export type MaterialOption = {
+  id: string;
+  name: string;
+  categoria: string;
+  unita: string;
+  quantita: number;
+};
+
 export const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60";
 export const FIELD_ERROR_CLASS =

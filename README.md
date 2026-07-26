@@ -20,7 +20,8 @@ Cliente → Lavoro → Lavorazione → Prezzo → Pagamento → Consegna
 - ⚙️ **Impostazioni** — dati del laboratorio (nome, contatti, valuta, IVA, tempo di consegna standard)
 - 🔔 **Notifiche** — scadenze e consegne in evidenza, con gestione dismissione per utente
 - 🔐 **Autenticazione** — accesso protetto con Auth.js v5
-- 📦 **Magazzino**, 📅 **Prenotazioni**, 🤖 **Assistente Laboratorio** — pianificate, vedi `BACKLOG.md`
+- 📦 **Magazzino** — materiali (stoffe, zip, fili, accessori) con soglie minime di scorta, collegato al consumo nei Lavori
+- 📅 **Prenotazioni**, 🤖 **Assistente Laboratorio** — pianificate, vedi `BACKLOG.md`
 
 ---
 
@@ -110,7 +111,7 @@ npx prisma db seed                        # ri-esegui seed dati
 | Notifiche | ✅ Completata |
 | API Routes | ✅ CRUD completo su Clienti/Lavori/Pagamenti/Statistiche/Impostazioni |
 | Database PostgreSQL | ✅ Attivo su Supabase |
-| Pagina Magazzino | ⏳ Pianificata |
+| Pagina Magazzino | ✅ Completata — DB reale, collegata al consumo materiali nei Lavori |
 | Pagina/API Prenotazioni | ⏳ Pianificata |
 | Assistente Laboratorio (chatbot) | ⏳ Pianificato |
 

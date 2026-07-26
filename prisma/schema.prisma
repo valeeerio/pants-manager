@@ -38,6 +38,7 @@ model Project {
   updatedAt      DateTime      @updatedAt
   payments       Payment[]
   images         ProjectImage[]
+  materials      ProjectMaterial[]
 
   @@index([status])
   @@index([dueDate])
@@ -90,6 +91,35 @@ model NotificaDismissa {
   createdAt  DateTime @default(now())
 
   @@unique([userId, notificaId])
+}
+
+model Material {
+  id        String            @id @default(cuid())
+  name      String
+  category  MaterialCategory
+  unit      MaterialUnit
+  quantity  Decimal           @db.Decimal(10, 2) @default(0)
+  minStock  Decimal           @db.Decimal(10, 2) @default(0)
+  unitCost  Decimal?          @db.Decimal(10, 2)
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  usages    ProjectMaterial[]
+
+  @@index([category])
+}
+
+model ProjectMaterial {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  quantity   Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+  @@index([materialId])
 }
 
 model LabSettings {
@@ -145,4 +175,20 @@ enum ImageType {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum MaterialCategory {
+  FABRIC
+  ZIP
+  THREAD
+  ACCESSORY
+  OTHER
+}
+
+enum MaterialUnit {
+  METER
+  PIECE
+  SPOOL
+  ROLL
+  GRAM
 }

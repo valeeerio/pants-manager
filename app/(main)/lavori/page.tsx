@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -92,7 +91,6 @@ export default function JobsPage() {
   const [filterType, setFilterType] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("dueDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [showMore, setShowMore] = useState(10);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -367,11 +365,8 @@ export default function JobsPage() {
     return () => document.removeEventListener("keydown", onKey);
   }, [isNewModalOpen]);
 
-  const visibleJobs = filteredAndSorted.slice(0, showMore);
-  const remaining = filteredAndSorted.length - showMore;
-
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-3rem)] flex-col gap-6">
       <PageHeader
         title="Lavori"
         description="Pianifica modifiche, riparazioni, confezioni su misura e urgenze di consegna."
@@ -394,7 +389,7 @@ export default function JobsPage() {
         />
       )}
 
-      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid shrink-0 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stages.map((stage) => (
           <Card key={stage.label} className="relative overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/60" />
@@ -412,13 +407,13 @@ export default function JobsPage() {
         ))}
       </section>
 
-      <Card>
-        <CardHeader>
+      <Card className="flex flex-1 flex-col min-h-0">
+        <CardHeader className="pb-0 shrink-0">
           <CardTitle className="text-slate-800">Lavori recenti</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex flex-1 flex-col min-h-0 p-0">
           {/* Barra filtri */}
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
+          <div className="flex shrink-0 flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
             <div className="flex flex-col gap-1 min-w-[260px] flex-1">
               <label className="text-xs font-medium text-slate-500">
                 Cerca
@@ -536,8 +531,9 @@ export default function JobsPage() {
           </div>
 
           {/* Tabella */}
-          <Table>
-            <TableHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+          <table className="w-full caption-bottom text-[13px]">
+            <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
                 <TableHead
                   className="cursor-pointer select-none whitespace-nowrap"
@@ -610,7 +606,7 @@ export default function JobsPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && !error && visibleJobs.map((job) => (
+              {!loading && !error && filteredAndSorted.map((job) => (
                 <TableRow
                   key={job.code}
                   className="cursor-pointer hover:bg-amber-50"
@@ -637,7 +633,7 @@ export default function JobsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {!loading && !error && visibleJobs.length === 0 && (
+              {!loading && !error && filteredAndSorted.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -648,27 +644,11 @@ export default function JobsPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+          </table>
+          </div>
 
-          {/* Carica altri */}
-          <div className="border-t border-slate-100 py-4 text-center">
-            {remaining > 0 ? (
-              <p className="text-sm text-slate-500">
-                Stai visualizzando {visibleJobs.length} di{" "}
-                {filteredAndSorted.length} lavori
-                {"  "}
-                <button
-                  className="font-medium text-amber-600 hover:underline"
-                  onClick={() => setShowMore((n) => n + 5)}
-                >
-                  Mostra altri 5
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400">
-                Tutti i lavori sono visualizzati
-              </p>
-            )}
+          <div className="shrink-0 border-t border-slate-100 px-5 py-2.5 text-[12px] text-slate-500">
+            {filteredAndSorted.length} lavoro/i trovato/i
           </div>
         </CardContent>
       </Card>

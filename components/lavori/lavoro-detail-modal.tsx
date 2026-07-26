@@ -17,6 +17,8 @@ import {
   type JobPhotos,
   type Cliente,
   type PaymentData,
+  type MaterialUsage,
+  type MaterialOption,
 } from "@/components/lavori/lavoro-shared";
 
 interface LavoroDetailModalProps {
@@ -57,6 +59,13 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [editSubmitError, setEditSubmitError] = useState("");
 
+  const [materialUsages, setMaterialUsages] = useState<MaterialUsage[]>([]);
+  const [materialiDisponibili, setMaterialiDisponibili] = useState<MaterialOption[]>([]);
+  const [selectedMaterialId, setSelectedMaterialId] = useState("");
+  const [materialQuantity, setMaterialQuantity] = useState("");
+  const [materialError, setMaterialError] = useState("");
+  const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+
   const [existingPayment, setExistingPayment] = useState<PaymentData | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
@@ -83,8 +92,10 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     Promise.all([
       fetch(`/api/lavori/${projectId}`).then((r) => (r.ok ? r.json() : null)),
       fetch("/api/clienti").then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/lavori/${projectId}/materiali`).then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/magazzino").then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([lavoro, clienti]) => {
+      .then(([lavoro, clienti, utilizzi, materiali]) => {
         if (cancelled) return;
         if (lavoro) {
           setJob(lavoro);
@@ -101,6 +112,11 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
           setLoadError("Impossibile caricare i dettagli del lavoro. Riprova più tardi.");
         }
         setClientiDisponibili(clienti ?? []);
+        setMaterialUsages(utilizzi ?? []);
+        setMaterialiDisponibili(materiali ?? []);
+        setSelectedMaterialId("");
+        setMaterialQuantity("");
+        setMaterialError("");
         setShowStatusChange(false);
         setShowDeleteConfirm(false);
         setPhotoError("");
@@ -347,6 +363,87 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     }
   }
 
+  async function handleAddMaterialUsage() {
+    if (!job) return;
+    setMaterialError("");
+
+    if (!selectedMaterialId) {
+      setMaterialError("Seleziona un materiale");
+      return;
+    }
+    const qty = parseFloat(materialQuantity);
+    if (!materialQuantity || isNaN(qty) || qty <= 0) {
+      setMaterialError("Inserisci una quantità valida");
+      return;
+    }
+
+    setIsAddingMaterial(true);
+    try {
+      const res = await fetch(`/api/lavori/${job.id}/materiali`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ materialId: selectedMaterialId, quantity: qty }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nell'aggiunta del materiale");
+      }
+
+      const usage: MaterialUsage & { stockResiduo: number | null } = await res.json();
+
+      setMaterialUsages((prev) => [
+        ...prev,
+        {
+          id: usage.id,
+          materialId: usage.materialId,
+          nomeMateriale: usage.nomeMateriale,
+          categoria: usage.categoria,
+          unita: usage.unita,
+          quantita: usage.quantita,
+        },
+      ]);
+
+      if (usage.stockResiduo != null) {
+        setMaterialiDisponibili((prev) =>
+          prev.map((m) => (m.id === usage.materialId ? { ...m, quantita: usage.stockResiduo as number } : m))
+        );
+      }
+
+      setSelectedMaterialId("");
+      setMaterialQuantity("");
+    } catch (error) {
+      setMaterialError(error instanceof Error ? error.message : "Errore nell'aggiunta del materiale.");
+    } finally {
+      setIsAddingMaterial(false);
+    }
+  }
+
+  async function handleRemoveMaterialUsage(usageId: string) {
+    if (!job) return;
+    setMaterialError("");
+    const usage = materialUsages.find((u) => u.id === usageId);
+    try {
+      const res = await fetch(`/api/lavori/${job.id}/materiali/${usageId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Errore nella rimozione del materiale");
+      }
+
+      setMaterialUsages((prev) => prev.filter((u) => u.id !== usageId));
+      if (usage) {
+        setMaterialiDisponibili((prev) =>
+          prev.map((m) => (m.id === usage.materialId ? { ...m, quantita: m.quantita + usage.quantita } : m))
+        );
+      }
+    } catch (error) {
+      setMaterialError(error instanceof Error ? error.message : "Errore nella rimozione del materiale.");
+    }
+  }
+
   function openEditModal(lavoro: Job) {
     setEditCliente(lavoro.clientId ?? "");
     setEditTipoLavoro(lavoro.typeRaw ?? "");
@@ -456,11 +553,11 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
           onClick={onClose}
         >
           <div
-            className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
+            className="relative mx-4 flex max-h-[92vh] w-full max-w-[1600px] flex-col overflow-y-auto rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-5">
               <div className="flex items-center gap-3">
                 <h2 className="font-mono text-[20px] font-bold tracking-[-0.02em] text-slate-900">
                   {job.code}
@@ -469,184 +566,41 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                   {job.status}
                 </Badge>
               </div>
-              <button
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Corpo */}
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Cliente" value={job.clientName} />
-                <Field label="Tipo lavoro" value={job.type} />
-                <Field label="Data ricezione" value={job.receivedAt} />
-                <Field label="Data consegna" value={job.dueDate} />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  title="Cambia stato"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  onClick={() => { setShowStatusChange((v) => !v); setStatusChangeError(""); }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+                <button
+                  title="Modifica lavoro"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  onClick={() => openEditModal(job)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  title="Elimina lavoro"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                  onClick={() => { setShowDeleteConfirm(true); setDeleteError(""); }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <button
+                  title="Chiudi"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  onClick={onClose}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <div className="mt-4 space-y-4">
-                <Field label="Descrizione" value={job.description} />
-                <div>
-                  <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Note interne</p>
-                  <p className="text-sm font-medium text-slate-800">
-                    {job.notes ?? <span className="text-slate-400">Nessuna nota</span>}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Input file nascosti per il picker di sistema */}
-            <input
-              ref={inputPrimaRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFileSelected(e, job.id, "prima")}
-            />
-            <input
-              ref={inputDopoRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFileSelected(e, job.id, "dopo")}
-            />
-
-            {/* Sezione foto Prima / Dopo */}
-            <div className="border-t border-stone-200 px-6 pt-5 pb-6">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">Foto lavoro</p>
-              <div className="grid grid-cols-2 gap-4">
-                {(["prima", "dopo"] as const).map((slot) => {
-                  const currentPhotos = jobPhotos[job.id];
-                  const foto = slot === "prima" ? (currentPhotos?.prima ?? null) : (currentPhotos?.dopo ?? null);
-                  const labelTitolo = slot === "prima" ? "Prima" : "Dopo";
-                  const labelSub = slot === "prima" ? "Stato all'arrivo" : "Risultato finale";
-                  const isUploading = uploadingSlot === slot;
-                  return (
-                    <div key={slot} className="flex flex-col items-center">
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{labelTitolo}</p>
-                      <p className="mb-3 text-xs text-slate-400">{labelSub}</p>
-                      {isUploading ? (
-                        <div
-                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50"
-                          style={{ aspectRatio: "4/3" }}
-                        >
-                          <span className="text-sm font-medium text-amber-600">Caricamento...</span>
-                        </div>
-                      ) : foto === null ? (
-                        <div
-                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 transition-colors hover:border-stone-400 hover:bg-stone-100"
-                          style={{ aspectRatio: "4/3" }}
-                          onClick={() => handleOpenFilePicker(slot)}
-                        >
-                          <Camera size={24} className="text-stone-400" />
-                          <span className="text-sm text-slate-400">Nessuna foto</span>
-                          <span className="mt-1 text-xs font-medium text-amber-600">+ Aggiungi foto</span>
-                        </div>
-                      ) : (
-                        <div
-                          className="group relative w-full cursor-pointer overflow-hidden rounded-lg"
-                          style={{ aspectRatio: "4/3" }}
-                          onClick={() => handleOpenFilePicker(slot)}
-                        >
-                          <img src={foto.url} alt={labelTitolo} className="h-full w-full object-cover" />
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                            <Pencil size={20} className="text-white" />
-                            <span className="text-xs font-medium text-white">Cambia foto</span>
-                          </div>
-                          <button
-                            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                            onClick={(e) => { e.stopPropagation(); handleRemovePhoto(job.id, slot); }}
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {photoError && <p className="mt-3 text-sm text-red-600">{photoError}</p>}
-            </div>
-
-            {/* Sezione pagamento */}
-            <div className="border-t border-stone-200 px-6 pt-5 pb-6">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">Pagamento</p>
-              {isPaymentLoading ? (
-                <p className="text-[13px] text-slate-400">Caricamento...</p>
-              ) : (
-                <>
-                  {existingPayment && (
-                    <div className="mb-4 flex items-center gap-2">
-                      <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${
-                        existingPayment.status === "PAID"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          : existingPayment.status === "DEPOSIT_PAID"
-                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                          : "bg-stone-50 text-stone-600 border-stone-200"
-                      }`}>
-                        {existingPayment.status === "PAID"
-                          ? "Pagato"
-                          : existingPayment.status === "DEPOSIT_PAID"
-                          ? "Acconto pagato"
-                          : "Non pagato"}
-                      </span>
-                      {job.price != null && (
-                        <span className="text-[13px] font-bold text-slate-900">
-                          {new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(job.price)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="mb-4">
-                    <Field label="Prezzo lavoro" value={job.price != null ? `€ ${job.price}` : null} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Stato</label>
-                      <select
-                        value={paymentStatus}
-                        onChange={(e) => setPaymentStatus(e.target.value)}
-                        className={`${SELECT_CLASS} w-full`}
-                      >
-                        <option value="UNPAID">Non pagato</option>
-                        <option value="DEPOSIT_PAID">Acconto pagato</option>
-                        <option value="PAID">Pagato</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Metodo</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className={`${SELECT_CLASS} w-full`}
-                      >
-                        <option value="">Nessuno</option>
-                        <option value="CASH">Contanti</option>
-                        <option value="CARD">Carta</option>
-                        <option value="BANK_TRANSFER">Bonifico</option>
-                        <option value="OTHER">Altro</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <Button
-                      className="bg-amber-600 text-white hover:bg-amber-700"
-                      onClick={savePayment}
-                      disabled={isPaymentSaving}
-                    >
-                      {isPaymentSaving ? "Salvataggio..." : "Salva pagamento"}
-                    </Button>
-                    {paymentSavedMsg && <span className="text-[13px] font-medium text-green-700">Salvato</span>}
-                  </div>
-                  {paymentError && <p className="mt-2 text-sm text-red-600">{paymentError}</p>}
-                </>
-              )}
             </div>
 
             {/* Sezione cambia stato (inline) */}
             {showStatusChange && (
-              <div className="shrink-0 border-t border-stone-100 px-6 pb-4 pt-4">
+              <div className="shrink-0 border-b border-stone-100 bg-stone-50/50 px-6 py-4">
                 <p className="mb-2 text-sm text-slate-600">Seleziona nuovo stato:</p>
                 <div className="flex items-center gap-2">
                   <select
@@ -680,39 +634,241 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
               </div>
             )}
 
-            {/* Footer */}
-            <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-6 py-4">
-              <Button
-                className="border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                variant="ghost"
-                onClick={() => { setShowDeleteConfirm(true); setDeleteError(""); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Elimina
-              </Button>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="border-stone-300 hover:bg-stone-50"
-                  onClick={() => { setShowStatusChange((v) => !v); setStatusChangeError(""); }}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Cambia stato
-                </Button>
-                <Button
-                  className="bg-amber-600 text-white hover:bg-amber-700"
-                  onClick={() => openEditModal(job)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Modifica
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-stone-300 hover:bg-stone-50"
-                  onClick={onClose}
-                >
-                  Chiudi
-                </Button>
+            {/* Input file nascosti per il picker di sistema */}
+            <input
+              ref={inputPrimaRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelected(e, job.id, "prima")}
+            />
+            <input
+              ref={inputDopoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelected(e, job.id, "dopo")}
+            />
+
+            {/* Corpo — tre colonne: dettagli+pagamento a sinistra, materiali al centro, foto a destra */}
+            <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+
+              {/* Colonna sinistra: pagamento in evidenza + dettagli lavoro */}
+              <div className="flex flex-col gap-5">
+                {/* Pagamento — sezione più importante, unico punto in cui compare il prezzo */}
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Pagamento</p>
+                    {existingPayment && (
+                      <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                        existingPayment.status === "PAID"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : existingPayment.status === "DEPOSIT_PAID"
+                          ? "bg-amber-100 text-amber-800 border-amber-300"
+                          : "bg-stone-50 text-stone-600 border-stone-200"
+                      }`}>
+                        {existingPayment.status === "PAID"
+                          ? "Pagato"
+                          : existingPayment.status === "DEPOSIT_PAID"
+                          ? "Acconto pagato"
+                          : "Non pagato"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[30px] font-bold tracking-[-0.03em] text-slate-900">
+                    {job.price != null
+                      ? new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(job.price)
+                      : <span className="text-slate-400">—</span>}
+                  </p>
+
+                  {isPaymentLoading ? (
+                    <p className="mt-3 text-[13px] text-slate-400">Caricamento...</p>
+                  ) : (
+                    <>
+                      <div className="mt-3 grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Stato</label>
+                          <select
+                            value={paymentStatus}
+                            onChange={(e) => setPaymentStatus(e.target.value)}
+                            className={`${SELECT_CLASS} w-full`}
+                          >
+                            <option value="UNPAID">Non pagato</option>
+                            <option value="DEPOSIT_PAID">Acconto pagato</option>
+                            <option value="PAID">Pagato</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Metodo</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className={`${SELECT_CLASS} w-full`}
+                          >
+                            <option value="">Nessuno</option>
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta</option>
+                            <option value="BANK_TRANSFER">Bonifico</option>
+                            <option value="OTHER">Altro</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <Button
+                          className="bg-amber-600 text-white hover:bg-amber-700"
+                          onClick={savePayment}
+                          disabled={isPaymentSaving}
+                        >
+                          {isPaymentSaving ? "Salvataggio..." : "Salva pagamento"}
+                        </Button>
+                        {paymentSavedMsg && <span className="text-[13px] font-medium text-green-700">Salvato</span>}
+                      </div>
+                      {paymentError && <p className="mt-2 text-sm text-red-600">{paymentError}</p>}
+                    </>
+                  )}
+                </div>
+
+                {/* Dettagli lavoro */}
+                <div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Cliente" value={job.clientName} />
+                    <Field label="Tipo lavoro" value={job.type} />
+                    <Field label="Data ricezione" value={job.receivedAt} />
+                    <Field label="Data consegna" value={job.dueDate} />
+                  </div>
+                  <div className="mt-4 space-y-4">
+                    <Field label="Descrizione" value={job.description} />
+                    <div>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Note interne</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {job.notes ?? <span className="text-slate-400">Nessuna nota</span>}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colonna centrale: materiali utilizzati */}
+              <div className="flex flex-col gap-4 lg:border-l lg:border-stone-200 lg:pl-6">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-700">Materiali utilizzati</p>
+
+                {materialUsages.length === 0 ? (
+                  <p className="text-[13px] text-slate-400">Nessun materiale utilizzato per questo lavoro.</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {materialUsages.map((usage) => (
+                      <li
+                        key={usage.id}
+                        className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2"
+                      >
+                        <span className="text-[13px] text-slate-700">
+                          {usage.nomeMateriale} — {usage.quantita} {usage.unita.toLowerCase()}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveMaterialUsage(usage.id)}
+                          className="flex h-6 w-6 items-center justify-center rounded text-red-500 hover:bg-red-50"
+                          title="Rimuovi materiale"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Materiale</label>
+                    <select
+                      value={selectedMaterialId}
+                      onChange={(e) => setSelectedMaterialId(e.target.value)}
+                      className={`${SELECT_CLASS} w-full`}
+                    >
+                      <option value="">Seleziona materiale</option>
+                      {materialiDisponibili.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.categoria})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-24">
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Quantità</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={materialQuantity}
+                      onChange={(e) => setMaterialQuantity(e.target.value)}
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+                  <Button
+                    className="bg-amber-600 text-white hover:bg-amber-700"
+                    onClick={handleAddMaterialUsage}
+                    disabled={isAddingMaterial}
+                  >
+                    {isAddingMaterial ? "Aggiunta..." : "Aggiungi"}
+                  </Button>
+                </div>
+                {materialError && <p className="text-sm text-red-600">{materialError}</p>}
+              </div>
+
+              {/* Colonna destra: foto Prima / Dopo, impilate */}
+              <div className="flex flex-col gap-4 lg:border-l lg:border-stone-200 lg:pl-6">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-700">Foto lavoro</p>
+                {(["prima", "dopo"] as const).map((slot) => {
+                  const currentPhotos = jobPhotos[job.id];
+                  const foto = slot === "prima" ? (currentPhotos?.prima ?? null) : (currentPhotos?.dopo ?? null);
+                  const labelTitolo = slot === "prima" ? "Prima" : "Dopo";
+                  const labelSub = slot === "prima" ? "Stato all'arrivo" : "Risultato finale";
+                  const isUploading = uploadingSlot === slot;
+                  return (
+                    <div key={slot} className="flex flex-col">
+                      <div className="mb-2 flex items-baseline gap-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{labelTitolo}</p>
+                        <p className="text-xs text-slate-400">{labelSub}</p>
+                      </div>
+                      {isUploading ? (
+                        <div
+                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50"
+                          style={{ aspectRatio: "16/9" }}
+                        >
+                          <span className="text-sm font-medium text-amber-600">Caricamento...</span>
+                        </div>
+                      ) : foto === null ? (
+                        <div
+                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 transition-colors hover:border-stone-400 hover:bg-stone-100"
+                          style={{ aspectRatio: "16/9" }}
+                          onClick={() => handleOpenFilePicker(slot)}
+                        >
+                          <Camera size={24} className="text-stone-400" />
+                          <span className="text-sm text-slate-400">Nessuna foto</span>
+                          <span className="mt-1 text-xs font-medium text-amber-600">+ Aggiungi foto</span>
+                        </div>
+                      ) : (
+                        <div
+                          className="group relative w-full cursor-pointer overflow-hidden rounded-lg"
+                          style={{ aspectRatio: "16/9" }}
+                          onClick={() => handleOpenFilePicker(slot)}
+                        >
+                          <img src={foto.url} alt={labelTitolo} className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Pencil size={20} className="text-white" />
+                            <span className="text-xs font-medium text-white">Cambia foto</span>
+                          </div>
+                          <button
+                            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                            onClick={(e) => { e.stopPropagation(); handleRemovePhoto(job.id, slot); }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {photoError && <p className="text-sm text-red-600">{photoError}</p>}
               </div>
             </div>
           </div>

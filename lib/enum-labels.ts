@@ -16,3 +16,19 @@ export const TYPE_MAP: Record<string, string> = {
   CUSTOM: "Su misura",
   OTHER: "Altro",
 };
+
+export const MATERIAL_CATEGORY_MAP: Record<string, string> = {
+  FABRIC: "Stoffa",
+  ZIP: "Zip",
+  THREAD: "Filo",
+  ACCESSORY: "Accessorio",
+  OTHER: "Altro",
+};
+
+export const MATERIAL_UNIT_MAP: Record<string, string> = {
+  METER: "Metri",
+  PIECE: "Pezzi",
+  SPOOL: "Rocchetti",
+  ROLL: "Rotoli",
+  GRAM: "Grammi",
+};
