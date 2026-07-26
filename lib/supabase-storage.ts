@@ -62,15 +62,18 @@ export async function deleteJobImage(path: string): Promise<void> {
 export async function getSignedImageUrl(
   path: string,
   expiresIn: number = 3600
-): Promise<string> {
+): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .createSignedUrl(path, expiresIn);
 
   if (error || !data) {
-    throw new Error(
-      `Errore nella generazione dell'URL firmato: ${error?.message ?? "sconosciuto"}`
+    console.error(
+      `Errore nella generazione dell'URL firmato per il path "${path}": ${
+        error?.message ?? "sconosciuto"
+      }`
     );
+    return null;
   }
 
   return data.signedUrl;

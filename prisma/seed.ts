@@ -1,5 +1,6 @@
 import { PrismaClient, ProjectType, ProjectStatus, PaymentStatus, PaymentMethod, ImageType, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { TYPE_MAP } from "../lib/enum-labels";
 
 const prisma = new PrismaClient();
 
@@ -81,7 +82,7 @@ async function main() {
       projectsData.push({
         code: codeOf(n++),
         clientId: clienti[(tIdx + sIdx) % (clienti.length - 1)].id,
-        title: `${tipo} demo ${sIdx + 1}`,
+        title: `${TYPE_MAP[tipo]} demo ${sIdx + 1}`,
         type: tipo,
         status: stato,
         price: 15 + tIdx * 5 + sIdx * 3,
@@ -96,7 +97,7 @@ async function main() {
     projectsData.push({
       code: codeOf(n++),
       clientId: clienti[i].id,
-      title: `${tipo} annullato`,
+      title: `${TYPE_MAP[tipo]} annullato`,
       type: tipo,
       status: ProjectStatus.CANCELLED,
       price: 20 + i * 10,
@@ -125,7 +126,7 @@ async function main() {
     projectsData.push({
       code: codeOf(n++),
       clientId: clienti[i % (clienti.length - 1)].id,
-      title: `${tipo} completato #${i + 1}`,
+      title: `${TYPE_MAP[tipo]} completato #${i + 1}`,
       type: tipo,
       status: ProjectStatus.COMPLETED,
       price: 15 + (i % 12) * 10,

@@ -30,6 +30,7 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
   const [isMounted, setIsMounted] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [clientiDisponibili, setClientiDisponibili] = useState<Cliente[]>([]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -68,15 +69,17 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     setIsMounted(true);
   }, []);
 
-  const isModalOpen = projectId != null && job != null;
+  const isModalOpen = projectId != null && (job != null || loadError !== "");
 
   useEffect(() => {
     if (!projectId) {
       setJob(null);
+      setLoadError("");
       return;
     }
     let cancelled = false;
     setLoading(true);
+    setLoadError("");
     Promise.all([
       fetch(`/api/lavori/${projectId}`).then((r) => (r.ok ? r.json() : null)),
       fetch("/api/clienti").then((r) => (r.ok ? r.json() : [])),
@@ -93,11 +96,19 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
               dopo: lavoro.photos?.dopo ?? null,
             },
           }));
+        } else {
+          setJob(null);
+          setLoadError("Impossibile caricare i dettagli del lavoro. Riprova più tardi.");
         }
         setClientiDisponibili(clienti ?? []);
         setShowStatusChange(false);
         setShowDeleteConfirm(false);
         setPhotoError("");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setJob(null);
+        setLoadError("Impossibile caricare i dettagli del lavoro. Riprova più tardi.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -410,6 +421,35 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
 
   return (
     <>
+      {isModalOpen && !job && loadError && createPortal(
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md"
+          onClick={onClose}
+        >
+          <div
+            className="relative mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-[0_24px_64px_rgba(15,23,42,0.22),0_8px_24px_rgba(15,23,42,0.12)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">Errore</h3>
+              <button
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                onClick={onClose}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-5 text-[13px] text-red-600">{loadError}</p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={onClose}>
+                Chiudi
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {isModalOpen && job && createPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md"
