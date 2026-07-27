@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableRowsSkeleton } from "@/components/shared/table-rows-skeleton";
 import { LavoroDetailModal } from "@/components/lavori/lavoro-detail-modal";
 import {
   FIELD_CLASS,
@@ -366,7 +367,7 @@ export default function JobsPage() {
   }, [isNewModalOpen]);
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
         title="Lavori"
         description="Pianifica modifiche, riparazioni, confezioni su misura e urgenze di consegna."
@@ -389,7 +390,7 @@ export default function JobsPage() {
         />
       )}
 
-      <section className="grid shrink-0 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stages.map((stage) => (
           <Card key={stage.label} className="relative overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/60" />
@@ -407,13 +408,13 @@ export default function JobsPage() {
         ))}
       </section>
 
-      <Card className="flex flex-1 flex-col min-h-0">
-        <CardHeader className="pb-0 shrink-0">
+      <Card>
+        <CardHeader className="pb-0">
           <CardTitle className="text-slate-800">Lavori recenti</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col min-h-0 p-0">
+        <CardContent className="p-0">
           {/* Barra filtri */}
-          <div className="flex shrink-0 flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
             <div className="flex flex-col gap-1 min-w-[260px] flex-1">
               <label className="text-xs font-medium text-slate-500">
                 Cerca
@@ -531,9 +532,8 @@ export default function JobsPage() {
           </div>
 
           {/* Tabella */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
           <table className="w-full caption-bottom text-[13px]">
-            <TableHeader className="sticky top-0 z-10 bg-white">
+            <TableHeader>
               <TableRow>
                 <TableHead
                   className="cursor-pointer select-none whitespace-nowrap"
@@ -592,13 +592,7 @@ export default function JobsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center text-slate-400">
-                    <p className="text-sm">Caricamento lavori...</p>
-                  </TableCell>
-                </TableRow>
-              )}
+              {loading && <TableRowsSkeleton columns={6} rows={6} />}
               {error && (
                 <TableRow>
                   <TableCell colSpan={6} className="py-16 text-center">
@@ -645,9 +639,8 @@ export default function JobsPage() {
               )}
             </TableBody>
           </table>
-          </div>
 
-          <div className="shrink-0 border-t border-slate-100 px-5 py-2.5 text-[12px] text-slate-500">
+          <div className="border-t border-slate-100 px-5 py-2.5 text-[12px] text-slate-500">
             {filteredAndSorted.length} lavoro/i trovato/i
           </div>
         </CardContent>

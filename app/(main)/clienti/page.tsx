@@ -30,6 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableRowsSkeleton } from "@/components/shared/table-rows-skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -764,13 +766,13 @@ export default function ClientiPage() {
 
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
         title="Clienti"
         description="Gestisci l'anagrafica dei clienti del laboratorio."
       />
 
-      <section className="grid shrink-0 grid-cols-3 gap-3.5">
+      <section className="grid grid-cols-3 gap-3.5">
         {[
           { label: "Clienti totali",              value: kpiClienti.totale,           Icon: Users    },
           { label: "Nuovi questo mese",            value: kpiClienti.nuoviMese,        Icon: UserPlus },
@@ -792,13 +794,13 @@ export default function ClientiPage() {
         ))}
       </section>
 
-      <Card className="flex flex-col flex-1 min-h-0">
-        <CardHeader className="pb-0 shrink-0">
+      <Card>
+        <CardHeader className="pb-0">
           <CardTitle className="text-slate-800">Archivio clienti</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0 p-0">
+        <CardContent className="p-0">
           {/* Barra filtri */}
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5 shrink-0">
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
             <div className="flex min-w-[260px] flex-1 flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">Cerca</label>
               <div className="relative">
@@ -840,9 +842,8 @@ export default function ClientiPage() {
           </div>
 
           {/* Tabella */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
           <table className="w-full caption-bottom text-[13px]">
-            <TableHeader className="sticky top-0 z-10 bg-white">
+            <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("nome")}>
                   Nome <SortIndicator active={sortBy === "nome"} order={sortOrder} />
@@ -862,13 +863,7 @@ export default function ClientiPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-16 text-center text-slate-400">
-                    <p className="text-sm">Caricamento clienti...</p>
-                  </TableCell>
-                </TableRow>
-              )}
+              {loading && <TableRowsSkeleton columns={5} rows={6} />}
               {error && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-16 text-center">
@@ -929,7 +924,6 @@ export default function ClientiPage() {
               )}
             </TableBody>
           </table>
-          </div>
         </CardContent>
       </Card>
 
@@ -1161,7 +1155,28 @@ export default function ClientiPage() {
                   <p className="mb-3 shrink-0 text-[15px] font-semibold text-slate-800">Storico lavori</p>
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
                     {clienteLavoriLoading ? (
-                      <p className="text-center text-[13px] text-slate-500">Caricamento...</p>
+                      <table className="w-full text-[12px]">
+                        <thead className="sticky top-0 bg-white">
+                          <tr className="border-b border-stone-200">
+                            <th className="pb-2 text-left font-semibold text-slate-500">Codice</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Tipo</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Stato</th>
+                            <th className="pb-2 text-left font-semibold text-slate-500">Consegna</th>
+                            <th className="pb-2 text-right font-semibold text-slate-500">Prezzo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.from({ length: 4 }).map((_, index) => (
+                            <tr key={index} className="border-b border-stone-100 last:border-0">
+                              <td className="py-2"><Skeleton className="h-3.5 w-16" /></td>
+                              <td className="py-2"><Skeleton className="h-3.5 w-20" /></td>
+                              <td className="py-2"><Skeleton className="h-4 w-16 rounded-full" /></td>
+                              <td className="py-2"><Skeleton className="h-3.5 w-16" /></td>
+                              <td className="py-2 flex justify-end"><Skeleton className="h-3.5 w-12" /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     ) : clienteLavoriError ? (
                       <p className="text-center text-[13px] text-red-600">{clienteLavoriError}</p>
                     ) : detailStats.sorted.length === 0 ? (

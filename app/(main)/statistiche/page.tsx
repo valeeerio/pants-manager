@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { RicaviGiornoChart } from "@/components/statistiche/ricavi-giorno-chart";
 import { MixLavorazioniChart } from "@/components/statistiche/mix-lavorazioni-chart";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type RicavoGiorno = {
   date: string;
@@ -89,7 +90,41 @@ export default function StatsPage() {
       />
 
       {loading ? (
-        <p className="text-[13px] text-slate-400">Caricamento…</p>
+        <>
+          <section className="grid gap-3.5 lg:grid-cols-[1.4fr_1fr]">
+            <Card>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-56 w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-28" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-56 w-full" />
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="grid gap-3.5 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} className="relative overflow-hidden">
+                <div className="relative p-5">
+                  <div className="mb-3 flex items-start justify-between">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="mt-1.5 h-3 w-28" />
+                </div>
+              </Card>
+            ))}
+          </section>
+        </>
       ) : error ? (
         <p className="text-[13px] text-red-600">{error}</p>
       ) : (

@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NotificationBanner } from "@/components/ui/notification-banner";
 import { LavoroDetailModal } from "@/components/lavori/lavoro-detail-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableRowsSkeleton } from "@/components/shared/table-rows-skeleton";
 
 const icons = [Scissors, CalendarCheck, Banknote, Wallet];
 
@@ -197,7 +199,7 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="flex flex-col gap-6 lg:h-[calc(100vh-3rem-61px)]">
+    <div className="flex flex-col gap-6">
       {notification && (
         <div className="shrink-0">
           <NotificationBanner
@@ -218,8 +220,17 @@ export default function DashboardPage() {
       {/* Sezione 1 — 4 metric cards */}
       <section className="grid shrink-0 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {loading && !data
-          ? icons.map((Icon, index) => (
-              <MetricCard key={index} label="—" value="—" change="Caricamento…" icon={Icon} />
+          ? icons.map((_, index) => (
+              <Card key={index} className="relative overflow-hidden">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="mt-1.5 h-3 w-28" />
+                </CardContent>
+              </Card>
             ))
           : metrics.map((metric, index) => {
               const Icon = icons[index];
@@ -237,12 +248,12 @@ export default function DashboardPage() {
       </section>
 
       {/* Sezione 2 — Tabella lavori + Scadenze */}
-      <section className="grid gap-3.5 xl:grid-cols-[1.85fr_1fr] lg:flex-1 lg:min-h-0">
+      <section className="grid gap-3.5 xl:grid-cols-[1.85fr_1fr]">
         <Card className="flex flex-col overflow-hidden">
           <CardHeader className="shrink-0 pb-0">
             <CardTitle className="text-[13px] font-semibold text-slate-800">Prossime scadenze</CardTitle>
           </CardHeader>
-          <CardContent className="px-0 pb-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <CardContent className="min-h-[320px] px-0 pb-0">
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-slate-100 hover:bg-transparent">
@@ -267,13 +278,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-slate-400">
-                      <p className="text-sm">Caricamento lavori…</p>
-                    </TableCell>
-                  </TableRow>
-                )}
+                {loading && <TableRowsSkeleton columns={6} rows={6} />}
                 {!loading && data?.scaduti.length === 0 && data?.inArrivo.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-slate-400">
@@ -326,9 +331,24 @@ export default function DashboardPage() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <CardContent className="min-h-[240px] pb-4">
             <div className="space-y-2">
-              {loading && <p className="px-1 py-4 text-[13px] text-slate-400">Caricamento…</p>}
+              {loading &&
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/50 px-3 py-2.5"
+                  >
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton className="h-3.5 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  </div>
+                ))}
               {!loading && data?.prontiDaRitirare.length === 0 && (
                 <p className="px-1 py-4 text-[13px] text-slate-400">Nessun lavoro in attesa di ritiro.</p>
               )}

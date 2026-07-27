@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableRowsSkeleton } from "@/components/shared/table-rows-skeleton";
 import { MATERIAL_CATEGORY_MAP, MATERIAL_UNIT_MAP } from "@/lib/enum-labels";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -333,19 +334,19 @@ export default function MagazzinoPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
         title="Magazzino"
         description="Gestisci stoffe, zip, fili e accessori del laboratorio."
       />
 
-      <Card className="flex flex-col flex-1 min-h-0">
-        <CardHeader className="pb-0 shrink-0">
+      <Card>
+        <CardHeader className="pb-0">
           <CardTitle className="text-slate-800">Materiali</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0 p-0">
+        <CardContent className="p-0">
           {/* Barra filtri */}
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5 shrink-0">
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
             <div className="flex min-w-[260px] flex-1 flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">Cerca</label>
               <div className="relative">
@@ -396,9 +397,8 @@ export default function MagazzinoPage() {
           </div>
 
           {/* Tabella */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
             <table className="w-full caption-bottom text-[13px]">
-              <TableHeader className="sticky top-0 z-10 bg-white">
+              <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("name")}>
                     Nome <SortIndicator active={sortBy === "name"} order={sortOrder} />
@@ -420,13 +420,7 @@ export default function MagazzinoPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-16 text-center text-slate-400">
-                      <p className="text-sm">Caricamento materiali...</p>
-                    </TableCell>
-                  </TableRow>
-                )}
+                {loading && <TableRowsSkeleton columns={7} rows={6} />}
                 {error && (
                   <TableRow>
                     <TableCell colSpan={7} className="py-16 text-center">
@@ -482,8 +476,7 @@ export default function MagazzinoPage() {
                 )}
               </TableBody>
             </table>
-          </div>
-          <div className="shrink-0 border-t border-slate-100 px-5 py-2.5 text-[12px] text-slate-500">
+          <div className="border-t border-slate-100 px-5 py-2.5 text-[12px] text-slate-500">
             {filteredAndSorted.length} materiale/i trovato/i
           </div>
         </CardContent>

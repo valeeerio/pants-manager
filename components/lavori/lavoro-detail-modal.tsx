@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Trash2, RefreshCw, Pencil, Camera } from "lucide-react";
+import { X, Trash2, Pencil, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/shared/status-badge";
 import {
   Field,
   FIELD_CLASS,
   FIELD_ERROR_CLASS,
   TEXTAREA_CLASS,
   SELECT_CLASS,
-  STATUS_COLORS,
   REVERSE_STATUS_MAP,
   type Job,
   type JobPhotos,
@@ -37,10 +37,6 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [quickStatusValue, setQuickStatusValue] = useState("");
-  const [showStatusChange, setShowStatusChange] = useState(false);
-  const [isStatusChanging, setIsStatusChanging] = useState(false);
-  const [statusChangeError, setStatusChangeError] = useState("");
 
   const [jobPhotos, setJobPhotos] = useState<Record<string, JobPhotos>>({});
   const [uploadingSlot, setUploadingSlot] = useState<"prima" | "dopo" | null>(null);
@@ -99,7 +95,6 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
         if (cancelled) return;
         if (lavoro) {
           setJob(lavoro);
-          setQuickStatusValue(lavoro.status);
           setJobPhotos((prev) => ({
             ...prev,
             [lavoro.id]: {
@@ -117,7 +112,6 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
         setSelectedMaterialId("");
         setMaterialQuantity("");
         setMaterialError("");
-        setShowStatusChange(false);
         setShowDeleteConfirm(false);
         setPhotoError("");
       })
@@ -224,41 +218,31 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
     }
   }
 
-  async function applyStatusChange() {
+  async function applyStatusChange(newStatus: string) {
     if (!job) return;
-    setIsStatusChanging(true);
-    setStatusChangeError("");
 
-    try {
-      const res = await fetch(`/api/lavori/${job.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: job.clientId ?? "",
-          type: job.typeRaw ?? "",
-          status: REVERSE_STATUS_MAP[quickStatusValue] ?? quickStatusValue,
-          dueDate: job.dueDate,
-          description: job.description,
-          price: job.price,
-          notes: job.notes,
-        }),
-      });
+    const res = await fetch(`/api/lavori/${job.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: job.clientId ?? "",
+        type: job.typeRaw ?? "",
+        status: REVERSE_STATUS_MAP[newStatus] ?? newStatus,
+        dueDate: job.dueDate,
+        description: job.description,
+        price: job.price,
+        notes: job.notes,
+      }),
+    });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Errore nell'aggiornamento dello stato");
-      }
-
-      const updated = await res.json();
-      setJob((prev) => (prev ? { ...prev, status: updated.status, statusRaw: updated.statusRaw } : null));
-      onUpdated?.(updated);
-      setShowStatusChange(false);
-    } catch (error) {
-      console.error("Errore cambio stato:", error);
-      setStatusChangeError(error instanceof Error ? error.message : "Errore nell'aggiornamento dello stato");
-    } finally {
-      setIsStatusChanging(false);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Errore nell'aggiornamento dello stato");
     }
+
+    const updated = await res.json();
+    setJob((prev) => (prev ? { ...prev, status: updated.status, statusRaw: updated.statusRaw } : null));
+    onUpdated?.(updated);
   }
 
   async function deleteLavoro() {
@@ -562,18 +546,9 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                 <h2 className="font-mono text-[20px] font-bold tracking-[-0.02em] text-slate-900">
                   {job.code}
                 </h2>
-                <Badge className={STATUS_COLORS[job.status] ?? "border-transparent bg-slate-200 text-slate-800"}>
-                  {job.status}
-                </Badge>
+                <StatusBadge status={job.status} onChange={applyStatusChange} />
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  title="Cambia stato"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                  onClick={() => { setShowStatusChange((v) => !v); setStatusChangeError(""); }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
                 <button
                   title="Modifica lavoro"
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
@@ -597,42 +572,6 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                 </button>
               </div>
             </div>
-
-            {/* Sezione cambia stato (inline) */}
-            {showStatusChange && (
-              <div className="shrink-0 border-b border-stone-100 bg-stone-50/50 px-6 py-4">
-                <p className="mb-2 text-sm text-slate-600">Seleziona nuovo stato:</p>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={quickStatusValue}
-                    onChange={(e) => setQuickStatusValue(e.target.value)}
-                    className={`${SELECT_CLASS} flex-1`}
-                    disabled={isStatusChanging}
-                  >
-                    <option value="Da iniziare">Da iniziare</option>
-                    <option value="In lavorazione">In lavorazione</option>
-                    <option value="In attesa cliente">In attesa cliente</option>
-                    <option value="Pronto">Pronto</option>
-                    <option value="Annullato">Annullato</option>
-                  </select>
-                  <Button
-                    className="bg-amber-600 text-white hover:bg-amber-700"
-                    onClick={applyStatusChange}
-                    disabled={isStatusChanging}
-                  >
-                    {isStatusChanging ? "Salvataggio..." : "Conferma"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => { setShowStatusChange(false); setStatusChangeError(""); }}
-                    disabled={isStatusChanging}
-                  >
-                    Annulla
-                  </Button>
-                </div>
-                {statusChangeError && <p className="mt-2 text-sm text-red-600">{statusChangeError}</p>}
-              </div>
-            )}
 
             {/* Input file nascosti per il picker di sistema */}
             <input
@@ -682,7 +621,16 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                   </p>
 
                   {isPaymentLoading ? (
-                    <p className="mt-3 text-[13px] text-slate-400">Caricamento...</p>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <Skeleton className="mb-1 h-3 w-10" />
+                        <Skeleton className="h-8 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="mb-1 h-3 w-14" />
+                        <Skeleton className="h-8 w-full" />
+                      </div>
+                    </div>
                   ) : (
                     <>
                       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -831,10 +779,10 @@ export function LavoroDetailModal({ projectId, onClose, onUpdated, onDeleted }: 
                       </div>
                       {isUploading ? (
                         <div
-                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50"
+                          className="w-full overflow-hidden rounded-lg border-2 border-dashed border-amber-300 bg-amber-50"
                           style={{ aspectRatio: "16/9" }}
                         >
-                          <span className="text-sm font-medium text-amber-600">Caricamento...</span>
+                          <Skeleton className="h-full w-full rounded-none bg-amber-200/40" />
                         </div>
                       ) : foto === null ? (
                         <div

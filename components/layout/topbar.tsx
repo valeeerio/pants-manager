@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, CalendarDays, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,15 +15,21 @@ import {
 import { LavoroDetailModal } from "@/components/lavori/lavoro-detail-modal";
 import { NotificationBanner } from "@/components/ui/notification-banner";
 
+type PosizionePannello = { top: number; right: number };
+
 export function Topbar() {
   const [notifiche, setNotifiche] = useState<Notifica[]>([]);
   const [calendario, setCalendario] = useState<CalendarioGiorno[]>([]);
   const [loading, setLoading] = useState(true);
   const [pannelloAperto, setPannelloAperto] = useState<"campanella" | "calendario" | null>(null);
+  const [posizionePannello, setPosizionePannello] = useState<PosizionePannello | null>(null);
   const [lavoroApertoId, setLavoroApertoId] = useState<string | null>(null);
   const [erroreDismiss, setErroreDismiss] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const calendarioBtnRef = useRef<HTMLButtonElement>(null);
+  const notificheBtnRef = useRef<HTMLButtonElement>(null);
+  const pannelloRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,19 +58,32 @@ export function Topbar() {
     if (!pannelloAperto) return;
 
     function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        (!containerRef.current || !containerRef.current.contains(target)) &&
+        (!pannelloRef.current || !pannelloRef.current.contains(target))
+      ) {
         setPannelloAperto(null);
       }
     }
     function onEscape(e: KeyboardEvent) {
       if (e.key === "Escape") setPannelloAperto(null);
     }
+    function onRicalcolaPosizione() {
+      const btn = pannelloAperto === "calendario" ? calendarioBtnRef.current : notificheBtnRef.current;
+      const rect = btn?.getBoundingClientRect();
+      if (rect) setPosizionePannello({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
 
     document.addEventListener("mousedown", onClickOutside);
     document.addEventListener("keydown", onEscape);
+    window.addEventListener("resize", onRicalcolaPosizione);
+    window.addEventListener("scroll", onRicalcolaPosizione, true);
     return () => {
       document.removeEventListener("mousedown", onClickOutside);
       document.removeEventListener("keydown", onEscape);
+      window.removeEventListener("resize", onRicalcolaPosizione);
+      window.removeEventListener("scroll", onRicalcolaPosizione, true);
     };
   }, [pannelloAperto]);
 
@@ -72,6 +92,15 @@ export function Topbar() {
   function apriLavoro(id: string) {
     setPannelloAperto(null);
     setLavoroApertoId(id);
+  }
+
+  function togglePannello(tipo: "campanella" | "calendario", btnRef: React.RefObject<HTMLButtonElement | null>) {
+    setPannelloAperto((p) => {
+      if (p === tipo) return null;
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setPosizionePannello({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+      return tipo;
+    });
   }
 
   async function dismissNotifiche(ids: string[]) {
@@ -126,52 +155,56 @@ export function Topbar() {
         <div ref={containerRef} className="flex items-center gap-1">
           <div className="relative">
             <Button
+              ref={calendarioBtnRef}
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-lg text-muted-foreground/70 hover:bg-slate-100 hover:text-foreground"
               aria-label="Calendario"
-              onClick={() => setPannelloAperto((p) => (p === "calendario" ? null : "calendario"))}
+              onClick={() => togglePannello("calendario", calendarioBtnRef)}
             >
               <CalendarDays className="h-[15px] w-[15px]" />
             </Button>
-
-            {pannelloAperto === "calendario" && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg">
-                <MiniCalendario
-                  calendario={calendario}
-                  onApriLavoro={apriLavoro}
-                />
-              </div>
-            )}
           </div>
 
           <div className="relative">
             <Button
+              ref={notificheBtnRef}
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-lg text-muted-foreground/70 hover:bg-slate-100 hover:text-foreground"
               aria-label="Notifiche"
-              onClick={() => setPannelloAperto((p) => (p === "campanella" ? null : "campanella"))}
+              onClick={() => togglePannello("campanella", notificheBtnRef)}
             >
               <Bell className="h-[15px] w-[15px]" />
             </Button>
             <BellBadge count={countAlta} />
-
-            {pannelloAperto === "campanella" && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg">
-                <NotifichePanel
-                  notifiche={notifiche}
-                  loading={loading}
-                  onApriLavoro={apriLavoro}
-                  onDismiss={(id) => dismissNotifiche([id])}
-                  onDismissAll={() => dismissNotifiche(notifiche.map((n) => n.id))}
-                />
-              </div>
-            )}
-
           </div>
         </div>
       </div>
+
+      {pannelloAperto && posizionePannello &&
+        createPortal(
+          <div
+            ref={pannelloRef}
+            style={{ top: posizionePannello.top, right: posizionePannello.right }}
+            className={`fixed z-[100] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg ${
+              pannelloAperto === "calendario" ? "w-96" : "w-[26rem]"
+            }`}
+          >
+            {pannelloAperto === "calendario" ? (
+              <MiniCalendario calendario={calendario} onApriLavoro={apriLavoro} />
+            ) : (
+              <NotifichePanel
+                notifiche={notifiche}
+                loading={loading}
+                onApriLavoro={apriLavoro}
+                onDismiss={(id) => dismissNotifiche([id])}
+                onDismissAll={() => dismissNotifiche(notifiche.map((n) => n.id))}
+              />
+            )}
+          </div>,
+          document.body
+        )}
 
       {erroreDismiss && (
         <NotificationBanner

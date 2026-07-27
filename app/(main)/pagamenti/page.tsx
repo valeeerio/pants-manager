@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TiltCard } from "@/components/ui/tilt-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { TableRowsSkeleton } from "@/components/shared/table-rows-skeleton"
 
 type Pagamento = {
   id: string
@@ -165,7 +167,7 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   {loading ? (
-                    <div className="h-8 w-24 animate-pulse rounded-md bg-slate-100" />
+                    <Skeleton className="h-8 w-24" />
                   ) : (
                     <p className="text-[26px] font-bold tracking-[-0.04em] text-slate-900">{stat.value}</p>
                   )}
@@ -209,21 +211,32 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent className="px-0 pb-0 pt-0">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-              Caricamento in corso…
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center py-16 text-sm text-red-600">
-              {error}
-            </div>
-          ) : filtrati.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-              {pagamenti.length === 0
-                ? "Nessun pagamento registrato."
-                : "Nessun risultato per i filtri selezionati."}
-            </div>
-          ) : (
-            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-5">Data</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Lavoro</TableHead>
+                    <TableHead>Metodo</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead className="pr-5 text-right">Importo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRowsSkeleton columns={6} rows={6} />
+                </TableBody>
+              </Table>
+            ) : error ? (
+              <div className="flex items-center justify-center py-16 text-sm text-red-600">
+                {error}
+              </div>
+            ) : filtrati.length === 0 ? (
+              <div className="flex items-center justify-center py-16 text-sm text-slate-400">
+                {pagamenti.length === 0
+                  ? "Nessun pagamento registrato."
+                  : "Nessun risultato per i filtri selezionati."}
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -271,10 +284,11 @@ export default function PaymentsPage() {
                   ))}
                 </TableBody>
               </Table>
-              <p className="px-5 py-3 text-[12px] text-slate-400">
-                Stai visualizzando {filtrati.length} di {pagamenti.length} risultati
-              </p>
-            </>
+            )}
+          {!loading && !error && filtrati.length > 0 && (
+            <p className="px-5 py-3 text-[12px] text-slate-400">
+              Stai visualizzando {filtrati.length} di {pagamenti.length} risultati
+            </p>
           )}
         </CardContent>
       </Card>

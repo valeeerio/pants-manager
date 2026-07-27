@@ -17,13 +17,13 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
 
 ## Miglioramenti UI (2026-07-26)
 
-- [ ] [media] Sidebar: sostituire l'implementazione custom (`components/layout/sidebar.tsx`) con il componente shadcn/ui Sidebar (https://ui.shadcn.com/docs/components/base/sidebar), aggiungendo un bottone/trigger per collassare/espandere — valutare impatto su `components/layout/mobile-nav.tsx` (oggi lista voci duplicata indipendente) e sulla palette CLAUDE.md (accent amber-600/700, sidebar stone-900) da preservare nel nuovo componente.
+- [x] [media] Sidebar: sostituire l'implementazione custom (`components/layout/sidebar.tsx`) con il componente shadcn/ui Sidebar — fatto (2026-07-27): comportamento automatico per route (sempre espansa su Dashboard, collassata a icone altrove, hover sull'area nera per riespandere temporaneamente), zero bottoni manuali, palette CLAUDE.md preservata, `mobile-nav.tsx` non toccato.
 
-- [ ] [media] Ridisegnare l'aggiornamento dello stato di un lavoro: oggi è un pannello inline "Cambia stato" (select + Conferma/Annulla) che si apre sotto l'header del modal dettaglio lavoro (`components/lavori/lavoro-detail-modal.tsx`, toggle dall'icona `RefreshCw` nell'header) — valutare un pattern più diretto/rapido (es. dropdown sul badge di stato stesso, o azioni rapide senza aprire un pannello separato). Da impostare con `/pianifica`, eventualmente insieme al redesign stati lavoro sopra se cambia anche l'insieme dei valori.
+- [x] [media] Ridisegnare l'aggiornamento dello stato di un lavoro — fatto (2026-07-27): pannello inline "Cambia stato" e icona `RefreshCw` rimossi, sostituiti con dropdown sul badge di stato (`components/shared/status-badge.tsx`), click esplicito per opzione.
 
 ## Bug UI da verificare/segnalati manualmente (2026-07-26)
 
-- [ ] [media] Calendario e notifiche (icone topbar) si sovrappongono al contenuto delle pagine quando aperti — **confermato e riprodotto da `qa` (2026-07-26)** su Lavori, Clienti, Magazzino (header sticky `z-10` delle rispettive tabelle, dentro un'area a scroll interno, copre il pannello dropdown `z-20` del topbar) e su Dashboard (`app/(main)/page.tsx`, causa diversa: una card/badge della sezione statistiche emerge sopra il pannello). Verificato via `elementsFromPoint` che nel punto di sovrapposizione vince la card/tabella della pagina, non il pannello dropdown, nonostante il suo `z-20` dichiarato — coerente con l'ipotesi: elementi `sticky`/card con proprio stacking context, il cui ordine di vittoria segue la posizione nell'albero DOM reale, non l'ordine visivo. **Non riprodotto** su Pagamenti (stesso pattern sticky header ma qui funziona correttamente, da capire la differenza) né su Statistiche (nessun header sticky, nessun bug). File coinvolti: `components/layout/topbar.tsx` (righe 99, 139, 161), `app/(main)/lavori/page.tsx`, `app/(main)/clienti/page.tsx`, `app/(main)/magazzino/page.tsx`, `app/(main)/page.tsx` (dashboard). Fix ipotizzato: alzare lo z-index del topbar/pannelli sopra qualunque stacking context di pagina (es. portalare i pannelli su `document.body` con `createPortal` come i modal, invece di `absolute` dentro l'header) — da confermare in fase di implementazione confrontando anche con Pagamenti per capire perché lì non si manifesta.
+- [x] [media] Calendario e notifiche (icone topbar) si sovrappongono al contenuto delle pagine quando aperti — fatto (2026-07-27): pannelli calendario/notifiche portati su `createPortal(document.body)` con posizionamento `fixed` via `getBoundingClientRect()`, fix generalizzato (non serve più intervenire per-pagina).
 
 ## Redesign stati lavoro — richiede chiarimenti utente prima di procedere (2026-07-26)
 
@@ -38,7 +38,11 @@ Formato: `- [ ] [priorità] descrizione — file di riferimento (origine)`
   - **Sovrapposizione con l'Epic multi-tenant (Fase 3 sotto)**: se si costruisce ora una tabella stati globale e poi la Fase 3 dell'epic la rende tenant-scoped, il lavoro rischia di essere rifatto due volte — valutare se convenga fare questo redesign già con lo scope della Fase 3 (stati per-tenant) invece che come tabella globale intermedia, o accettare esplicitamente il doppio lavoro futuro.
 
   **Prossimo passo:** chiarire con l'utente le domande sopra (significato di "Consegnato", destino di "Annullato", timing rispetto all'Epic multi-tenant) prima di impostare con `/pianifica`. Richiede comunque conferma utente esplicita per modifica schema DB, come da CLAUDE.md.
-- [ ] [media] Skeleton di caricamento: introdurre il componente shadcn/ui Skeleton (https://ui.shadcn.com/docs/components/base/skeleton) per gli stati di loading di tutte le chiamate API del progetto, in sostituzione degli attuali placeholder testuali ("Caricamento...") sparsi in `app/(main)/*/page.tsx` e nei modal (es. `components/lavori/lavoro-detail-modal.tsx`, `components/layout/topbar.tsx`).
+- [x] [media] Skeleton di caricamento: introdurre il componente shadcn/ui Skeleton — fatto (2026-07-27), in sostituzione dei placeholder testuali "Caricamento..." su dashboard, clienti, lavori, magazzino, pagamenti, statistiche e modal dettaglio lavoro; card dashboard "Prossime scadenze"/"Pronti da ritirare" con altezza minima fissa per evitare salti di layout tra skeleton e dati reali.
+
+## Da rivedere (2026-07-27)
+
+- [ ] [media] Rivedere pagina Dashboard (in particolare le due card "Prossime scadenze"/"Pronti da ritirare", ora ad altezza minima fissa e con dataset di test molto più ampio — verificare se il layout regge bene con volumi reali, es. la card "Pronti da ritirare" può arrivare a decine di elementi e allungare parecchio la pagina) e la sezione materiali associati a ogni lavoro nel modal dettaglio (`components/lavori/lavoro-detail-modal.tsx`, gestione magazzino collegata ai lavori) — nessun problema specifico segnalato, solo da riguardare con calma in una sessione dedicata.
 
 ## Epic: Piattaforma Multi-Tenant Generalizzata (2026-07-26)
 
