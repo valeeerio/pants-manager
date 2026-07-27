@@ -1,4 +1,4 @@
-import { PrismaClient, ProjectType, ProjectStatus, PaymentStatus, PaymentMethod, ImageType, UserRole } from "@prisma/client";
+import { PrismaClient, ProjectType, ProjectStatus, PaymentStatus, PaymentMethod, ImageType, UserRole, MaterialCategory, MaterialUnit } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { TYPE_MAP } from "../lib/enum-labels";
 
@@ -24,7 +24,8 @@ async function main() {
   await prisma.notificaDismissa.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.projectImage.deleteMany();
-  await prisma.project.deleteMany();
+  await prisma.project.deleteMany(); // cascata anche su ProjectMaterial (onDelete: Cascade)
+  await prisma.material.deleteMany(); // ora libero da vincoli (ProjectMaterial già svuotata sopra)
   await prisma.client.deleteMany();
   await prisma.user.deleteMany();
   await prisma.labSettings.deleteMany();
@@ -52,20 +53,38 @@ async function main() {
   });
   console.log("✓ Utenti creati: admin@gestionale.it, operatore@gestionale.it (password: gestionalexsimone)");
 
-  // Clienti (uno senza alcun lavoro, per testare "clienti senza lavori attivi")
-  const clienti = await Promise.all([
-    prisma.client.create({ data: { firstName: "Mario", lastName: "Rossi", phone: "+39 347 221 9081", email: "mario.rossi@email.it", city: "Milano" } }),
-    prisma.client.create({ data: { firstName: "Luca", lastName: "Bianchi", phone: "+39 333 714 0029", email: "luca.bianchi@email.it", city: "Torino" } }),
-    prisma.client.create({ data: { firstName: "Anna", lastName: "Verdi", phone: "+39 339 882 4401", email: "anna.verdi@email.it", city: "Milano" } }),
-    prisma.client.create({ data: { firstName: "Giuseppe", lastName: "Neri", phone: "+39 348 447 1120", email: "giuseppe.neri@email.it", city: "Bergamo" } }),
-    prisma.client.create({ data: { firstName: "Francesca", lastName: "Conti", phone: "+39 346 598 3312", email: "f.conti@email.it", city: "Milano" } }),
-    prisma.client.create({ data: { firstName: "Roberto", lastName: "Ferrara", phone: "+39 335 109 7754", email: "r.ferrara@email.it", city: "Monza" } }),
-    prisma.client.create({ data: { firstName: "Chiara", lastName: "Galli", phone: "+39 340 552 8817", email: "chiara.galli@email.it", city: "Como" } }),
-    prisma.client.create({ data: { firstName: "Davide", lastName: "Marino", phone: "+39 328 774 2205", email: "davide.marino@email.it", city: "Milano" } }),
-    // senza email (campo opzionale) e senza alcun lavoro
-    prisma.client.create({ data: { firstName: "Elena", lastName: "Colombo", phone: "+39 331 998 1234", city: "Milano" } }),
-  ]);
-  console.log("✓ Clienti creati:", clienti.length, "(Elena Colombo senza lavori, per testare i filtri)");
+  // Clienti (l'ultimo è senza alcun lavoro, per testare "clienti senza lavori attivi")
+  const NOMI = [
+    "Mario", "Luca", "Anna", "Giuseppe", "Francesca", "Roberto", "Chiara", "Davide", "Elena", "Marco",
+    "Sara", "Paolo", "Giulia", "Andrea", "Valentina", "Stefano", "Martina", "Fabio", "Alessia", "Simone",
+    "Elisa", "Matteo", "Silvia", "Riccardo", "Federica", "Nicola", "Laura", "Alessandro", "Ilaria", "Michele",
+    "Cristina", "Antonio", "Barbara", "Enrico", "Serena",
+  ];
+  const COGNOMI = [
+    "Rossi", "Bianchi", "Verdi", "Neri", "Conti", "Ferrara", "Galli", "Marino", "Colombo", "Ricci",
+    "Marchetti", "Fontana", "Santoro", "Mariani", "Rinaldi", "Caruso", "Ferrari", "Esposito", "Bruno", "Gatti",
+    "Villa", "De Luca", "Costa", "Giordano", "Barbieri", "Pellegrini", "Leone", "Longo", "Gentile", "Martini",
+    "Vitale", "Lombardi", "Serra", "Coppola", "Testa",
+  ];
+  const CITTA = ["Milano", "Torino", "Bergamo", "Monza", "Como", "Brescia", "Varese", "Pavia", "Lecco", "Cremona"];
+
+  const clientiData = NOMI.map((firstName, i) => {
+    const lastName = COGNOMI[i];
+    const city = CITTA[i % CITTA.length];
+    const phone = `+39 3${(i % 9) + 1}0 ${String(100 + i * 7).padStart(3, "0")} ${String(1000 + i * 13).padStart(4, "0")}`;
+    const senzaEmail = i % 7 === 6; // ~1 su 7 senza email
+    return {
+      firstName,
+      lastName,
+      phone,
+      city,
+      email: senzaEmail ? undefined : `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, "")}@email.it`,
+    };
+  });
+  const clienti = await Promise.all(clientiData.map((data) => prisma.client.create({ data })));
+  console.log("✓ Clienti creati:", clienti.length, `(${clienti[clienti.length - 1].firstName} ${clienti[clienti.length - 1].lastName} senza lavori, per testare i filtri)`);
+
+  const clientiConLavori = clienti.length - 1; // esclude l'ultimo cliente dai lavori
 
   let n = 1;
   const projectsData: {
@@ -73,51 +92,51 @@ async function main() {
     price: number; receivedAt: Date; dueDate?: Date | null; updatedAt?: Date;
   }[] = [];
 
-  // 1. Un lavoro TODO/IN_PROGRESS/WAITING_CUSTOMER per ognuno degli 8 tipi (24 lavori)
-  //    dueDate distribuite tra scaduti, in arrivo oggi/domani, futuri lontani.
+  // 1. Lavori attivi (TODO / IN_PROGRESS / WAITING_CUSTOMER), 60 totali, distribuiti su tutti gli 8 tipi
+  //    con dueDate sparse tra scaduti, in arrivo a breve e lontani nel tempo.
   const statiAttivi = [ProjectStatus.TODO, ProjectStatus.IN_PROGRESS, ProjectStatus.WAITING_CUSTOMER];
-  TUTTI_I_TIPI.forEach((tipo, tIdx) => {
-    statiAttivi.forEach((stato, sIdx) => {
-      const offsetDueDate = [-3, 0, 2, 10][(tIdx + sIdx) % 4]; // scaduto / oggi / in arrivo / lontano
-      projectsData.push({
-        code: codeOf(n++),
-        clientId: clienti[(tIdx + sIdx) % (clienti.length - 1)].id,
-        title: `${TYPE_MAP[tipo]} demo ${sIdx + 1}`,
-        type: tipo,
-        status: stato,
-        price: 15 + tIdx * 5 + sIdx * 3,
-        receivedAt: giorniFa(15 + tIdx),
-        dueDate: giorniFa(-offsetDueDate),
-      });
-    });
-  });
-
-  // 2. Lavori CANCELLED (per verificare l'esclusione dal mix lavorazioni)
-  [ProjectType.HEM, ProjectType.CUSTOM, ProjectType.OTHER].forEach((tipo, i) => {
+  const dueOffsets = [-10, -5, -2, 0, 1, 3, 7, 14, 30, 45]; // giorni da oggi (negativo = scaduto)
+  for (let i = 0; i < 60; i++) {
+    const tipo = TUTTI_I_TIPI[i % TUTTI_I_TIPI.length];
+    const stato = statiAttivi[i % statiAttivi.length];
+    const senzaDueDate = i % 11 === 10;
+    const receivedAt = giorniFa(5 + (i % 40));
     projectsData.push({
       code: codeOf(n++),
-      clientId: clienti[i].id,
-      title: `${TYPE_MAP[tipo]} annullato`,
+      clientId: clienti[i % clientiConLavori].id,
+      title: `${TYPE_MAP[tipo]} - ${stato === ProjectStatus.TODO ? "da iniziare" : stato === ProjectStatus.IN_PROGRESS ? "in lavorazione" : "attesa cliente"} #${i + 1}`,
+      type: tipo,
+      status: stato,
+      price: 15 + (i % 12) * 8,
+      receivedAt,
+      dueDate: senzaDueDate ? null : giorniFa(-dueOffsets[i % dueOffsets.length]),
+    });
+  }
+
+  // 2. Lavori CANCELLED, 20 totali, distribuiti sui tipi e sparsi negli ultimi ~10 mesi
+  for (let i = 0; i < 20; i++) {
+    const tipo = TUTTI_I_TIPI[i % TUTTI_I_TIPI.length];
+    projectsData.push({
+      code: codeOf(n++),
+      clientId: clienti[i % clientiConLavori].id,
+      title: `${TYPE_MAP[tipo]} annullato #${i + 1}`,
       type: tipo,
       status: ProjectStatus.CANCELLED,
-      price: 20 + i * 10,
-      receivedAt: giorniFa(20 + i),
-      dueDate: giorniFa(10 + i),
+      price: 20 + (i % 10) * 7,
+      receivedAt: giorniFa(30 + i * 15),
+      dueDate: giorniFa(20 + i * 15),
     });
-  });
+  }
 
-  // 3. 30 lavori COMPLETED (finestra usata da /api/statistiche per "tempo medio modifica"),
-  //    con receivedAt/updatedAt/dueDate pensati per dare KPI realistiche:
-  //    - metà completati questo mese, metà in mesi precedenti
-  //    - tempi di lavorazione variabili (1-45 giorni)
-  //    - consegne puntuali ed in ritardo miste, più alcune senza dueDate
-  for (let i = 0; i < 30; i++) {
+  // 3. Lavori COMPLETED, 140 totali (finestra usata da /api/statistiche per "tempo medio modifica"),
+  //    sparsi sugli ultimi ~12 mesi con tempi di lavorazione e puntualità variabili.
+  for (let i = 0; i < 140; i++) {
     const tipo = TUTTI_I_TIPI[i % TUTTI_I_TIPI.length];
-    const completatoGiorniFa = i < 15 ? Math.floor(i * 1.8) : 20 + (i - 15) * 6; // prime 15 nel mese corrente
-    const tempoLavorazione = 1 + (i % 9) * 5; // 1..41 giorni
+    const completatoGiorniFa = Math.floor(i * 2.6) + (i % 9); // sparso su ~12 mesi
+    const tempoLavorazione = 1 + (i % 9) * 4; // 1..33 giorni
     const receivedAt = giorniFa(completatoGiorniFa + tempoLavorazione);
     const updatedAt = giorniFa(completatoGiorniFa);
-    const haDueDate = i % 6 !== 5; // 5 su 30 senza dueDate
+    const haDueDate = i % 6 !== 5; // 1 su 6 senza dueDate
     const inRitardo = i % 4 === 0;
     const dueDate = haDueDate
       ? new Date(updatedAt.getTime() + (inRitardo ? -2 : 2) * DAY)
@@ -125,7 +144,7 @@ async function main() {
 
     projectsData.push({
       code: codeOf(n++),
-      clientId: clienti[i % (clienti.length - 1)].id,
+      clientId: clienti[i % clientiConLavori].id,
       title: `${TYPE_MAP[tipo]} completato #${i + 1}`,
       type: tipo,
       status: ProjectStatus.COMPLETED,
@@ -174,6 +193,14 @@ async function main() {
     // i % 3 === 2 → nessuna riga Payment (progetto senza pagamento associato)
   });
 
+  // Qualche UNPAID anche su lavori annullati (rimborsi/mancati incassi da gestire)
+  const annullati = projectsCreati.filter((p) => p.status === ProjectStatus.CANCELLED);
+  annullati.forEach((p, i) => {
+    if (i % 4 === 0) {
+      pagamenti.push({ projectId: p.id, status: PaymentStatus.UNPAID });
+    }
+  });
+
   await Promise.all(pagamenti.map((p) => prisma.payment.create({ data: p })));
   console.log("✓ Pagamenti creati:", pagamenti.length);
 
@@ -181,7 +208,7 @@ async function main() {
   // NOTA: i path NON corrispondono a file reali nel bucket Supabase Storage
   // "project-images" — la signed URL generata a runtime risulterà quindi non
   // risolvibile finché non si caricano davvero delle immagini tramite l'app.
-  const conFoto = completati.slice(0, 5);
+  const conFoto = completati.slice(0, 16);
   const immagini: { projectId: string; path: string; type: ImageType }[] = [];
   conFoto.forEach((p, i) => {
     immagini.push({ projectId: p.id, path: `seed/${p.code}-prima.jpg`, type: ImageType.BEFORE });
@@ -190,6 +217,51 @@ async function main() {
   });
   await Promise.all(immagini.map((img) => prisma.projectImage.create({ data: img })));
   console.log("✓ Righe ProjectImage create (placeholder, nessun file reale):", immagini.length);
+
+  // Materiali di magazzino: mix di categorie/unità, con alcuni casi sotto-scorta (quantity < minStock)
+  const materialiData: {
+    name: string; category: MaterialCategory; unit: MaterialUnit;
+    quantity: number; minStock: number; unitCost: number;
+  }[] = [
+    { name: "Tessuto lana grigia", category: MaterialCategory.FABRIC, unit: MaterialUnit.METER, quantity: 12, minStock: 15, unitCost: 18.5 },
+    { name: "Tessuto cotone blu", category: MaterialCategory.FABRIC, unit: MaterialUnit.METER, quantity: 40, minStock: 10, unitCost: 9.9 },
+    { name: "Tessuto lino naturale", category: MaterialCategory.FABRIC, unit: MaterialUnit.METER, quantity: 8, minStock: 10, unitCost: 22 },
+    { name: "Tessuto velluto nero", category: MaterialCategory.FABRIC, unit: MaterialUnit.METER, quantity: 25, minStock: 8, unitCost: 27.5 },
+    { name: "Tessuto denim", category: MaterialCategory.FABRIC, unit: MaterialUnit.METER, quantity: 30, minStock: 12, unitCost: 11.2 },
+    { name: "Zip metallica 18cm", category: MaterialCategory.ZIP, unit: MaterialUnit.PIECE, quantity: 60, minStock: 20, unitCost: 1.8 },
+    { name: "Zip invisibile 20cm", category: MaterialCategory.ZIP, unit: MaterialUnit.PIECE, quantity: 15, minStock: 20, unitCost: 1.5 },
+    { name: "Zip plastica colorata", category: MaterialCategory.ZIP, unit: MaterialUnit.PIECE, quantity: 45, minStock: 15, unitCost: 1.2 },
+    { name: "Filo poliestere nero", category: MaterialCategory.THREAD, unit: MaterialUnit.SPOOL, quantity: 25, minStock: 10, unitCost: 3.5 },
+    { name: "Filo cotone bianco", category: MaterialCategory.THREAD, unit: MaterialUnit.SPOOL, quantity: 6, minStock: 10, unitCost: 3.2 },
+    { name: "Filo elastico", category: MaterialCategory.THREAD, unit: MaterialUnit.SPOOL, quantity: 18, minStock: 6, unitCost: 4.0 },
+    { name: "Bottoni metallo", category: MaterialCategory.ACCESSORY, unit: MaterialUnit.PIECE, quantity: 200, minStock: 50, unitCost: 0.3 },
+    { name: "Bottoni madreperla", category: MaterialCategory.ACCESSORY, unit: MaterialUnit.PIECE, quantity: 30, minStock: 40, unitCost: 0.6 },
+    { name: "Fibbie cintura", category: MaterialCategory.ACCESSORY, unit: MaterialUnit.PIECE, quantity: 25, minStock: 10, unitCost: 1.9 },
+    { name: "Gancetti pantaloni", category: MaterialCategory.ACCESSORY, unit: MaterialUnit.PIECE, quantity: 80, minStock: 30, unitCost: 0.4 },
+    { name: "Nastro rinforzo orlo", category: MaterialCategory.OTHER, unit: MaterialUnit.ROLL, quantity: 5, minStock: 5, unitCost: 6.5 },
+    { name: "Etichette personalizzate", category: MaterialCategory.OTHER, unit: MaterialUnit.ROLL, quantity: 3, minStock: 5, unitCost: 4.2 },
+    { name: "Imbottitura", category: MaterialCategory.OTHER, unit: MaterialUnit.GRAM, quantity: 500, minStock: 200, unitCost: 0.02 },
+  ];
+  const materiali = await Promise.all(materialiData.map((data) => prisma.material.create({ data })));
+  console.log("✓ Materiali creati:", materiali.length, `(${materialiData.filter((m) => m.quantity < m.minStock).length} sotto-scorta)`);
+
+  // Utilizzo materiali sui lavori: circa metà dei progetti (i primi 120), 1-3 materiali ciascuno
+  const progettiConMateriali = projectsCreati.slice(0, 120);
+  const conteggiMateriali = [2, 3, 1, 2, 3, 2, 1, 3, 2, 2];
+  const projectMaterialData: { projectId: string; materialId: string; quantity: number }[] = [];
+  progettiConMateriali.forEach((p, idx) => {
+    const count = conteggiMateriali[idx % conteggiMateriali.length];
+    for (let k = 0; k < count; k++) {
+      const materiale = materiali[(idx + k * 3) % materiali.length];
+      projectMaterialData.push({
+        projectId: p.id,
+        materialId: materiale.id,
+        quantity: 0.5 + ((idx + k) % 10) * 0.5,
+      });
+    }
+  });
+  await Promise.all(projectMaterialData.map((data) => prisma.projectMaterial.create({ data })));
+  console.log("✓ Utilizzi materiali (ProjectMaterial) creati:", projectMaterialData.length);
 
   // Notifiche dismesse: un paio per l'admin, per testare /api/notifiche/dismiss
   await Promise.all([
